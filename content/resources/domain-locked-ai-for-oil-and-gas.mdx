@@ -1,0 +1,60 @@
+---
+title: "Why oil & gas needs domain-locked AI — not a generic chatbot"
+excerpt: "A general chatbot will confidently give you a wrong torque value. In a safety-critical industry that isn't a bug — it's a hazard. Here's what 'domain-locked' actually means."
+date: 2026-04-20
+tag: "AI"
+author: "PetroBrain"
+faq:
+  - question: "What does 'domain-locked' mean?"
+    answer: "It means the assistant only operates within oil & gas — it answers within the domain, defers safety-critical calls to a competent person, and declines off-topic questions instead of guessing in a field where a confident wrong answer is dangerous."
+  - question: "Why shouldn't the language model do the math?"
+    answer: "Language models are strong at language and unreliable at arithmetic. A safety-critical figure should come from a deterministic calculation engine, with the model selecting the method and citing the source — not generating the number itself."
+---
+
+A general-purpose chatbot is built to be helpful. Ask it for a flange bolt torque and it
+will give you a number — fluently, confidently, and with no idea whether it's right. In most
+settings that's a minor annoyance. On a wellhead, it's a hazard.
+
+That gap is the whole argument for **domain-locked** AI.
+
+## Helpful is not the same as safe
+
+The instinct that makes a generic assistant pleasant to use — answer anyway, sound
+confident — is exactly the instinct you do **not** want near a safety-critical decision. The
+right behaviour is often to *decline*, to say *"I'm not certain — verify against this
+standard,"* or to defer to the competent person.
+
+> Calibrated honesty about uncertainty is a feature, not a limitation. A confident wrong
+> answer is the most expensive kind.
+
+## What "domain-locked" means in practice
+
+- **It stays in the domain.** Off-topic questions get a decline, not a guess.
+- **It grounds answers in your documents.** Retrieval over your SOPs, P&IDs and well files —
+  not a recollection of the open internet.
+- **It cites and shows working.** Every figure has a source and a calculation you can check.
+- **It defers the hard calls.** Safety-critical outputs carry an explicit instruction to
+  verify with a qualified person.
+
+## The model should never do the math
+
+Here's a principle worth stating plainly:
+
+```
+model:  select the method   →   engine:  compute(inputs)   →   answer:  result + citation
+```
+
+The language model picks the right formula and explains why. A **deterministic calculation
+engine** produces the number. Same inputs, same answer, every time — and checkable. The
+model never invents the figure.
+
+## Why this is the harder — and better — path
+
+It would be easier to ship a thin chat wrapper over a general model. It would also be
+wrong for this industry. Building inside-out from the standards, hazards and workflows of
+oil & gas is more work, but it's the only version that an HSE lead and an IT reviewer can
+actually trust.
+
+---
+
+*See it handle a question you'd expect it to get wrong — [book a demo](/demo).*
