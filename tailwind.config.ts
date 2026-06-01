@@ -23,12 +23,14 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // Base background + layered dark surfaces (depth via stacking).
-        base: "#0B0E13", // deep slate — page background
+        // Base background + layered surfaces. Channel-variable backed so the app shell
+        // can theme (light/dark) via [data-app-theme]; defaults (in globals.css :root)
+        // are the exact original dark hexes, so the marketing site is unchanged.
+        base: "rgb(var(--c-base) / <alpha-value>)", // deep slate — page background
         surface: {
-          1: "#11151C", // raised panels, cards
-          2: "#171C25", // nested / hover surfaces
-          3: "#1E2632", // lightest layered surface, highlighted panels
+          1: "rgb(var(--c-surface-1) / <alpha-value>)", // raised panels, cards
+          2: "rgb(var(--c-surface-2) / <alpha-value>)", // nested / hover surfaces
+          3: "rgb(var(--c-surface-3) / <alpha-value>)", // lightest layered surface
         },
         // Single brand accent — safety-amber / HSE high-vis.
         accent: {
@@ -55,17 +57,18 @@ const config: Config = {
           800: "#262D38",
           900: "#171C25",
         },
-        // Semantic text + borders mapped to the grey scale (AA on `base`).
+        // Semantic borders — channel-variable backed (theme-aware in the app shell).
         border: {
-          subtle: "#222936",
-          strong: "#323B4A",
+          subtle: "rgb(var(--c-border-subtle) / <alpha-value>)",
+          strong: "rgb(var(--c-border-strong) / <alpha-value>)",
         },
       },
       textColor: {
-        primary: "#E6EAF0", // ~13.5:1 on base — body
-        secondary: "#AEB7C5", // ~7:1 — supporting copy
-        muted: "#8B95A6", // ~6.4:1 on base — captions
-        faint: "#808A99", // ~5.5:1 on base (AA on base/surface-1/2) — dimmest readable text
+        // Channel-variable backed; dark defaults preserve the original AA contrasts.
+        primary: "rgb(var(--c-text-primary) / <alpha-value>)", // body
+        secondary: "rgb(var(--c-text-secondary) / <alpha-value>)", // supporting copy
+        muted: "rgb(var(--c-text-muted) / <alpha-value>)", // captions
+        faint: "rgb(var(--c-text-faint) / <alpha-value>)", // dimmest readable text
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

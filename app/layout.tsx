@@ -3,8 +3,6 @@ import "./globals.css";
 import { fontMono, fontSans } from "@/lib/fonts";
 import { site } from "@/lib/site";
 import { Plausible } from "@/components/analytics/Plausible";
-import { Nav } from "@/components/layout/Nav";
-import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -38,15 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${fontSans.variable} ${fontMono.variable}`}>
       <body className="min-h-dvh">
-        <a
-          href="#main"
-          className="sr-only-focusable absolute left-4 top-4 z-[100] rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-contrast"
-        >
-          Skip to content
-        </a>
-        <Nav />
-        <main id="main">{children}</main>
-        <Footer />
+        {/* Chrome (nav/footer or app shell) lives in the route-group layouts:
+            app/(marketing)/layout.tsx and app/app/layout.tsx. */}
+        {children}
         <Plausible />
       </body>
     </html>

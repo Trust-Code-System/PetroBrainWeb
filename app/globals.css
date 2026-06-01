@@ -5,6 +5,42 @@
 @layer base {
   :root {
     color-scheme: dark;
+
+    /* ----------------------------------------------------------------
+     * Theme tokens as RGB channels (space-separated) so Tailwind's
+     * `<alpha-value>` opacity modifiers keep working (e.g. bg-base/85).
+     * These defaults ARE the original dark hexes — the marketing site
+     * is byte-for-byte unchanged. Only the app shell overrides them
+     * (scoped to [data-app-theme="light"]) for a light control-room.
+     * Accent + semantic status colors stay fixed (brand constants).
+     * ---------------------------------------------------------------- */
+    --c-base: 11 14 19; /* #0B0E13 */
+    --c-surface-1: 17 21 28; /* #11151C */
+    --c-surface-2: 23 28 37; /* #171C25 */
+    --c-surface-3: 30 38 50; /* #1E2632 */
+    --c-border-subtle: 34 41 54; /* #222936 */
+    --c-border-strong: 50 59 74; /* #323B4A */
+    --c-text-primary: 230 234 240; /* #E6EAF0 */
+    --c-text-secondary: 174 183 197; /* #AEB7C5 */
+    --c-text-muted: 139 149 166; /* #8B95A6 */
+    --c-text-faint: 128 138 153; /* #808A99 */
+  }
+
+  /* Light control-room palette — scoped to the app shell only, so it never
+   * leaks onto the (always-dark) marketing site. Minimal but coherent;
+   * a fully-polished light theme is a later design-system task. */
+  [data-app-theme="light"] {
+    color-scheme: light;
+    --c-base: 245 247 250; /* #F5F7FA */
+    --c-surface-1: 255 255 255; /* #FFFFFF */
+    --c-surface-2: 240 243 247; /* #F0F3F7 */
+    --c-surface-3: 230 234 240; /* #E6EAF0 */
+    --c-border-subtle: 214 220 228; /* #D6DCE4 */
+    --c-border-strong: 180 188 200; /* #B4BCC8 */
+    --c-text-primary: 23 28 37; /* #171C25 */
+    --c-text-secondary: 58 66 80; /* #3A4250 */
+    --c-text-muted: 82 91 107; /* #525B6B */
+    --c-text-faint: 107 117 133; /* #6B7585 */
   }
 
   html {
