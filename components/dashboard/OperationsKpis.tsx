@@ -32,7 +32,7 @@ type KpiView = {
 
 function sumScopes(s: ScopeSummary | undefined): number | null {
   if (!s) return null;
-  const vals = [s.scope1.co2e, s.scope2.co2e, s.scope3.co2e].filter((v): v is number => v !== null);
+  const vals = [s.scope1?.co2e, s.scope2?.co2e, s.scope3?.co2e].filter((v): v is number => v != null);
   return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
 }
 
@@ -47,12 +47,12 @@ export function OperationsKpis() {
     const vals = items.map((a) => a.flaringVolume).filter((v): v is number => v != null);
     return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
   })();
-  const assetCount = assets.data?.items.length ?? 0;
+  const assetCount = assets.data?.items?.length ?? 0;
 
   const kpis: KpiView[] = [
     {
       label: "Emissions",
-      unit: scope.data?.scope1.unit ?? "tCO₂e",
+      unit: scope.data?.scope1?.unit ?? "tCO₂e",
       icon: "emissions",
       href: "/app/emissions",
       seed: "Help me add our emissions data so the dashboard reflects our operations.",
@@ -61,7 +61,7 @@ export function OperationsKpis() {
     },
     {
       label: "Flaring",
-      unit: flaring.data?.items[0]?.volumeUnit ?? "Mscf",
+      unit: flaring.data?.items?.[0]?.volumeUnit ?? "Mscf",
       icon: "flaring",
       href: "/app/flaring",
       seed: "Set up flaring tracking for our assets so I can monitor it against NUPRC Tier-3.",
