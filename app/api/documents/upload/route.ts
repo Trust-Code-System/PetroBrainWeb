@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 const API_URL = (process.env.PETROBRAIN_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 export async function POST(req: NextRequest) {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!readSession(token)) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }

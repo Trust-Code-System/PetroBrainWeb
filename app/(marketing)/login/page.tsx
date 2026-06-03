@@ -15,12 +15,13 @@ export const metadata: Metadata = {
  * different tool. The post-login destination comes from ?next (set by middleware when it
  * bounces an unauthenticated user) and is passed to the client form.
  */
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { next?: string };
+  searchParams?: Promise<{ next?: string }>;
 }) {
-  const next = typeof searchParams?.next === "string" ? searchParams.next : undefined;
+  const sp = await searchParams;
+  const next = typeof sp?.next === "string" ? sp.next : undefined;
 
   return (
     <Container className="flex min-h-[calc(100dvh-4rem)] items-center justify-center py-16">

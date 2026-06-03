@@ -16,12 +16,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { dataset: string } },
+  { params }: { params: Promise<{ dataset: string }> },
 ) {
-  const provider = getProvider(params.dataset);
+  const { dataset } = await params;
+  const provider = getProvider(dataset);
   if (!provider) {
     return NextResponse.json(
-      { error: `Unknown dataset "${params.dataset}".` },
+      { error: `Unknown dataset "${dataset}".` },
       { status: 404 },
     );
   }

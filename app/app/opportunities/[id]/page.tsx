@@ -10,10 +10,15 @@ export const metadata: Metadata = {
  * list shows in a slide-over). Deep-linkable from notifications/emails. Data is fetched
  * client-side via the /api/pb proxy; honest loading/error states.
  */
-export default function OpportunityDetailPage({ params }: { params: { id: string } }) {
+export default async function OpportunityDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   return (
     <div className="mx-auto max-w-7xl">
-      <RoundDetailRoute id={decodeURIComponent(params.id)} />
+      <RoundDetailRoute id={decodeURIComponent(id)} />
     </div>
   );
 }
