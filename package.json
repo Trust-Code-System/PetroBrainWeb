@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@neondatabase/auth": "^0.4.1-beta",
     "@tanstack/react-query": "^5.100.14",
     "contentlayer2": "^0.5.8",
     "date-fns": "^3.6.0",

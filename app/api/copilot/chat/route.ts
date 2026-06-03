@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, readSession } from "@/lib/auth/jwt";
+import { getBackendAccessToken } from "@/lib/auth/server";
 import {
   CHAT_URL,
   buildChatRequest,
@@ -21,8 +20,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!readSession(token)) {
+  const token = await getBackendAccessToken();
+  if (!token) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 

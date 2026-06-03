@@ -6,12 +6,12 @@ import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
+import { authClient } from "@/lib/auth/client";
 
 /**
- * LoginForm — email + password against /api/auth/login (which sets the httpOnly session
- * cookie). On success we hard-navigate into the app so the server shell re-renders with
- * the new cookie and hydrates the user's role/tenant. `next` is the post-login
- * destination passed from the server page (already a same-origin path).
+ * LoginForm — email + password via Neon Auth (Better Auth). On success we hard-navigate into
+ * the app so the server shell re-renders with the new session and hydrates the user.
+ * `next` is the post-login destination (already a same-origin path).
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,22 +44,14 @@ export function LoginForm({ next }: { next?: string }) {
     setErrors({});
 
     setStatus("submitting");
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Sign-in failed. Please try again.");
-      }
-      // Full navigation: the server shell reads the new cookie and hydrates identity.
-      window.location.assign(safeNext(next));
-    } catch (err) {
+    const { error } = await authClient.signIn.email({ email: email.trim(), password });
+    if (error) {
       setStatus("error");
-      setSubmitError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
+      setSubmitError(error.message ?? "Invalid email or password.");
+      return;
     }
+    // Full navigation: the server shell reads the new session and hydrates identity.
+    window.location.assign(safeNext(next));
   }
 
   const submitting = status === "submitting";
@@ -99,21 +91,10 @@ export function LoginForm({ next }: { next?: string }) {
 
       <p className="text-center text-sm text-secondary">
         New to PetroBrain?{" "}
-        <Link
-          href="/signup"
-          className="text-accent underline-offset-2 hover:underline"
-        >
-          Request access
+        <Link href="/signup" className="text-accent underline-offset-2 hover:underline">
+          Create an account
         </Link>
       </p>
-
-      {process.env.NODE_ENV !== "production" && (
-        <p className="text-center text-xs text-faint">
-          <a href="/api/auth/dev-login" className="underline underline-offset-2 hover:text-secondary">
-            Dev sign-in (local, no backend)
-          </a>
-        </p>
-      )}
     </form>
   );
 }

@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, readSession } from "@/lib/auth/jwt";
+import { getBackendAccessToken } from "@/lib/auth/server";
 
 /**
  * Document upload proxy (multipart → backend RAG ingestion, A5). The generic /api/pb proxy
@@ -15,8 +14,8 @@ export const dynamic = "force-dynamic";
 const API_URL = (process.env.PETROBRAIN_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 export async function POST(req: NextRequest) {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!readSession(token)) {
+  const token = await getBackendAccessToken();
+  if (!token) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 

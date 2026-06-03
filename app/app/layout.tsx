@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { ThemeProvider, ThemeScript } from "@/components/app/ThemeProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
@@ -11,7 +11,8 @@ import { ActiveAssetProvider } from "@/components/app/ActiveAssetProvider";
 import { Sidebar } from "@/components/app/Sidebar";
 import { TopBar } from "@/components/app/TopBar";
 import { CopilotBubble } from "@/components/app/CopilotBubble";
-import { SESSION_COOKIE, decodeJwt, claimsToUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth/server";
+import type { User } from "@/lib/auth/types";
 
 /**
  * App shell — the logged-in product's chrome (separate from the marketing Nav/Footer).
@@ -19,19 +20,29 @@ import { SESSION_COOKIE, decodeJwt, claimsToUser } from "@/lib/auth/jwt";
  * page. The shell root (#app-shell) carries data-app-theme so the light/dark toggle is
  * scoped here only; ThemeScript applies the stored theme before paint (no flash).
  *
- * Route protection (unauthenticated → /login) is enforced in middleware.ts; reaching
- * this layout implies a valid session. We read the session cookie here to hydrate
- * AuthProvider with the user's role + tenant for app-wide RBAC gating.
+ * Route protection (unauthenticated → /login) is enforced in proxy.ts (Neon Auth
+ * middleware); we re-read the session here to hydrate AuthProvider with the user. Tenant is
+ * resolved backend-side from the Neon token, so it's blank here for now.
  */
 export const metadata: Metadata = {
   title: { default: "App", template: "%s · PetroBrain" },
   robots: { index: false, follow: false },
 };
 
+// auth.getSession() reads cookies, so this layout must render dynamically.
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  const claims = decodeJwt(token);
-  const user = claims ? claimsToUser(claims) : null;
+  const { data: session } = await auth.getSession();
+  if (!session?.user) redirect("/login");
+  const u = session.user;
+  const user: User = {
+    id: u.id,
+    email: u.email,
+    name: u.name ?? undefined,
+    role: (u as { role?: string }).role ?? "",
+    tenantId: "",
+  };
 
   return (
     <ThemeProvider>

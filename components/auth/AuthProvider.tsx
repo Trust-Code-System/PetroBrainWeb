@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { User } from "@/lib/auth/jwt";
+import { authClient } from "@/lib/auth/client";
+import type { User } from "@/lib/auth/types";
 
 /**
  * AuthProvider — app-wide identity (role + tenant) for the logged-in shell, hydrated
@@ -34,10 +35,10 @@ export function AuthProvider({
 
   const signOut = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      // Neon Auth clears its session cookies.
+      await authClient.signOut();
     } catch {
-      // Even if the call fails, fall through to a full navigation home — the cookie is
-      // httpOnly, so a hard reload is the clean reset of client state regardless.
+      // Fall through to a full navigation home regardless — guarantees client caches reset.
     }
     // Full navigation (not router.push) guarantees every client cache/store is dropped.
     window.location.assign("/");

@@ -13,7 +13,9 @@ are exposed to the browser (no secrets); everything else is server-only.
 ### Required for the logged-in app
 | Var | Scope | Purpose |
 |-----|-------|---------|
-| `PETROBRAIN_API_URL` | **server** | Base URL of the backend (A1 auth + all `/api/v1/*`). The `/api/auth/*`, `/api/pb/*`, `/api/copilot/chat`, and the multipart upload routes proxy here and attach the Bearer token. **No `NEXT_PUBLIC_` prefix** — keeps the token + host off the client. |
+| `PETROBRAIN_API_URL` | **server** | Base URL of the data backend (e.g. `https://petrobrain-api.onrender.com`). `/api/pb/*`, `/api/copilot/chat`, and the upload routes proxy here and attach the signed-in user's Neon Auth JWT as Bearer. **No `NEXT_PUBLIC_` prefix.** |
+| `NEON_AUTH_BASE_URL` | **server** | Neon Auth (Better Auth) "Auth URL" — from Neon console → Auth → Configuration. |
+| `NEON_AUTH_COOKIE_SECRET` | **server** | Secret for the Neon Auth session cookie (≥32 chars: `openssl rand -base64 32`). **No `NEXT_PUBLIC_` prefix.** |
 | `NEXT_PUBLIC_SITE_URL` | public | Canonical site URL for metadata / robots / sitemap (e.g. `https://petrobrain.ai`). |
 
 ### Public data (server-only; each degrades to an honest "unavailable" if unset)
@@ -55,7 +57,7 @@ never fake data.**
 > endpoints not yet built — treat the bridged ones (auth, copilot, and the generic proxy) as
 > authoritative.
 
-- **Auth:** `POST /auth/signin`, `POST /auth/signup` (body `{ email, password }`) → `{ token, principal }` (JWT `token`; claims `sub,tenant_id,role,exp`). *(Bridged ✅)*
+- **Auth:** handled by **Neon Auth (Better Auth)** — the frontend uses `@neondatabase/auth` (login/signup/sessions at `/api/auth/[...path]` → Neon Auth server). The data backend must **verify the Neon JWT** sent as Bearer on every call: validate against JWKS `${NEON_AUTH_BASE_URL}/.well-known/jwks.json` (EdDSA/Ed25519, 15-min tokens), read the user id (= `neon_auth` user) + email, resolve tenant/role from its own table (auto-provision on first login). *(Frontend ✅; backend verification = follow-up in Idansss/PetroBrain.)*
 - **Copilot:** `POST /chat` (body `{ message, module?, asset_context? }`) → JSON `{ answer, citations[], flags[], tool_results[] }`; the chat route adapts it into the UI's SSE `delta|citation|done` frames. *(Bridged ✅)* Future: streaming + per-turn history + the 4 app-action tools.
 - **Emissions:** `GET /emissions/scope-summary`, `GET|POST /emissions/sources`, `DELETE /emissions/sources/{id}` (undo), `GET /emissions/financed`, `POST /emissions/reports`, `GET /emissions/reconciliation/flaring`.
 - **Flaring:** `GET /flaring/assets|methane-intensity|zero-routine-tracker|opportunity`.
