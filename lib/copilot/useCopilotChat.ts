@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readEventStream } from "./stream";
+import {
+  type ConversationMeta,
+  deleteConversation,
+  getConversation,
+  listConversations,
+  newConversationId,
+  upsertConversation,
+} from "./conversations";
 import type { ChatMessage, PageContext, StreamEvent, ToolActivity } from "./types";
 
 /**
@@ -22,11 +30,59 @@ export function useCopilotChat() {
   const [status, setStatus] = useState<Status>("idle");
   const abortRef = useRef<AbortController | null>(null);
 
+  // Per-device conversation history (localStorage). `conversationId` is the active thread.
+  const [conversationId, setConversationId] = useState<string>(() => newConversationId());
+  const [conversations, setConversations] = useState<ConversationMeta[]>([]);
+  useEffect(() => {
+    setConversations(listConversations());
+  }, []);
+
   // Mirror messages in a ref so `send` can read the latest history without re-creating.
   const messagesRef = useRef<ChatMessage[]>(messages);
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  // Persist the active thread after each completed turn (not mid-stream), and refresh the
+  // history list. Skipped while streaming so we don't write on every delta.
+  useEffect(() => {
+    if (status === "streaming" || messages.length === 0) return;
+    upsertConversation(conversationId, messages);
+    setConversations(listConversations());
+  }, [status, messages, conversationId]);
+
+  /** Start a fresh conversation (the current one is already persisted by the effect above). */
+  const newChat = useCallback(() => {
+    abortRef.current?.abort();
+    setMessages([]);
+    setStatus("idle");
+    setConversationId(newConversationId());
+  }, []);
+
+  /** Reopen a stored conversation in the panel. */
+  const loadChat = useCallback((id: string) => {
+    const convo = getConversation(id);
+    if (!convo) return;
+    abortRef.current?.abort();
+    setMessages(convo.messages);
+    setStatus("idle");
+    setConversationId(id);
+  }, []);
+
+  /** Delete a stored conversation; if it's the active one, start fresh. */
+  const deleteChat = useCallback(
+    (id: string) => {
+      deleteConversation(id);
+      setConversations(listConversations());
+      setConversationId((current) => {
+        if (current !== id) return current;
+        setMessages([]);
+        setStatus("idle");
+        return newConversationId();
+      });
+    },
+    [],
+  );
 
   const patch = useCallback((id: string, fn: (m: ChatMessage) => ChatMessage) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
@@ -139,7 +195,17 @@ export function useCopilotChat() {
     abortRef.current?.abort();
   }, []);
 
-  return { messages, status, send, stop };
+  return {
+    messages,
+    status,
+    send,
+    stop,
+    conversationId,
+    conversations,
+    newChat,
+    loadChat,
+    deleteChat,
+  };
 }
 
 function upsertTool(tools: ToolActivity[], tool: ToolActivity): ToolActivity[] {
