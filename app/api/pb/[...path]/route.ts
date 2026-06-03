@@ -5,7 +5,7 @@ import { SESSION_COOKIE, readSession } from "@/lib/auth/jwt";
 /**
  * Authenticated BFF proxy to the PetroBrain backend. The browser calls /api/pb/<path>;
  * we attach the Bearer token from the httpOnly session cookie (so it never touches client
- * JS) and forward to {PETROBRAIN_API_URL}/api/v1/<path>, preserving the query string and
+ * JS) and forward to {PETROBRAIN_API_URL}/<path>, preserving the query string and
  * JSON body. The response body is streamed back verbatim (so JSON *and* generated report
  * files both work), copying through the content-type / content-disposition.
  *
@@ -22,7 +22,7 @@ async function forward(req: NextRequest, path: string[]): Promise<Response> {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  const target = `${API_URL}/api/v1/${path.map(encodeURIComponent).join("/")}${req.nextUrl.search}`;
+  const target = `${API_URL}/${path.map(encodeURIComponent).join("/")}${req.nextUrl.search}`;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     Accept: req.headers.get("accept") ?? "application/json",

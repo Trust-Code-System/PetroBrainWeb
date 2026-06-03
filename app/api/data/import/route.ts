@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(`${API_URL}/api/v1/data/import`, {
+    upstream = await fetch(`${API_URL}/data/import`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
       body,

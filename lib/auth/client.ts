@@ -6,11 +6,13 @@
  * the *assumed* contract (standard FastAPI/JWT); swap the paths/field names here and the
  * rest of the app is unaffected.
  *
- * Assumed contract:
- *   POST {API}/api/v1/auth/login   { email, password }
- *        -> 200 { access_token, token_type, expires_in? }   | 401 { detail }
- *   POST {API}/api/v1/auth/signup  { email, password, full_name, company }
- *        -> 201 { ... , access_token? }  (access_token only if auto-approved)
+ * Live contract (PetroBrain backend on Render — verified against /openapi.json):
+ *   POST {API}/auth/signin   { email, password }
+ *        -> 200 { token, principal }            | 401 { detail }
+ *   POST {API}/auth/signup   { email, password }
+ *        -> 200 { token, principal }            (issues a session immediately)
+ *   The JWT is in `token` (we also accept `access_token` defensively); its own `exp`
+ *   claim drives the cookie lifetime (the backend doesn't return expires_in).
  *
  * Base URL: server-only env PETROBRAIN_API_URL (no NEXT_PUBLIC_ prefix on purpose).
  */
@@ -50,13 +52,19 @@ function detailOf(body: Record<string, unknown> | null, fallback: string): strin
   return typeof detail === "string" && detail.trim() ? detail : fallback;
 }
 
+/** The backend returns the JWT under `token`; accept `access_token` too, just in case. */
+function tokenOf(body: Record<string, unknown> | null): string | undefined {
+  const t = body?.token ?? body?.access_token;
+  return typeof t === "string" ? t : undefined;
+}
+
 export async function loginRequest(
   email: string,
   password: string,
 ): Promise<AuthResult<TokenBundle>> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api/v1/auth/login`, {
+    res = await fetch(`${API_URL}/auth/signin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -74,8 +82,8 @@ export async function loginRequest(
     return { ok: false, status: res.status, message };
   }
 
-  const accessToken = body?.access_token;
-  if (typeof accessToken !== "string") {
+  const accessToken = tokenOf(body);
+  if (!accessToken) {
     return { ok: false, status: 502, message: "Authentication service returned no token." };
   }
   const expiresIn = typeof body?.expires_in === "number" ? body.expires_in : undefined;
@@ -90,15 +98,12 @@ export async function signupRequest(input: {
 }): Promise<AuthResult<SignupResult>> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api/v1/auth/signup`, {
+    // The backend's /auth/signup only accepts { email, password } (full_name/company are
+    // collected in the UI for our records but not part of the backend schema).
+    res = await fetch(`${API_URL}/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: input.email,
-        password: input.password,
-        full_name: input.fullName,
-        company: input.company,
-      }),
+      body: JSON.stringify({ email: input.email, password: input.password }),
       cache: "no-store",
     });
   } catch {
@@ -114,7 +119,7 @@ export async function signupRequest(input: {
     return { ok: false, status: res.status, message };
   }
 
-  const accessToken = typeof body?.access_token === "string" ? body.access_token : undefined;
+  const accessToken = tokenOf(body);
   const expiresIn = typeof body?.expires_in === "number" ? body.expires_in : undefined;
   return { ok: true, data: { accessToken, expiresIn } };
 }

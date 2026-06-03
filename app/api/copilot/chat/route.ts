@@ -1,17 +1,21 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, readSession } from "@/lib/auth/jwt";
-import { ORCHESTRATOR_CHAT_URL, buildOrchestratorBody } from "@/lib/copilot/client";
+import {
+  CHAT_URL,
+  buildChatRequest,
+  eventsFromChatResponse,
+  eventsToSse,
+} from "@/lib/copilot/client";
 import type { ChatMessage, PageContext } from "@/lib/copilot/types";
 
 /**
- * Copilot chat proxy (read-only). The browser posts { messages, pageContext }; we attach
- * the Bearer token from the httpOnly session cookie (so it never touches client JS),
- * forward to the A8 orchestrator with the page context in runtime_context.page_context,
- * and stream the SSE response straight back.
+ * Copilot chat proxy (read-only). The browser posts { messages, pageContext }; we attach the
+ * Bearer token from the httpOnly session cookie (so it never touches client JS) and call the
+ * backend /chat endpoint. That endpoint returns a single JSON answer, so we adapt it into the
+ * SSE event frames the UI consumes (delta → citations → done) and stream those back.
  *
- * The orchestrator owns the system prompt, guardrails, RAG and read tools — we don't
- * re-implement any of that here; we only relay.
+ * The backend owns the system prompt, guardrails, RAG and tools — we only relay + adapt shape.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,14 +38,14 @@ export async function POST(req: Request) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(ORCHESTRATOR_CHAT_URL, {
+    upstream = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "text/event-stream",
+        Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(buildOrchestratorBody(body.messages, body.pageContext)),
+      body: JSON.stringify(buildChatRequest(body.messages, body.pageContext)),
       cache: "no-store",
     });
   } catch {
@@ -51,15 +55,18 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!upstream.ok || !upstream.body) {
+  if (!upstream.ok) {
     return NextResponse.json(
       { error: "The copilot service returned an error." },
       { status: upstream.status === 401 ? 401 : 502 },
     );
   }
 
-  // Relay the SSE stream verbatim.
-  return new Response(upstream.body, {
+  const json = (await upstream.json().catch(() => ({}))) as Record<string, unknown>;
+
+  // Adapt the single-JSON answer into the SSE frames the UI parses (delta → citations → done).
+  const sse = eventsToSse(eventsFromChatResponse(json));
+  return new Response(sse, {
     status: 200,
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",

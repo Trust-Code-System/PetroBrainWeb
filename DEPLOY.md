@@ -44,12 +44,19 @@ are exposed to the browser (no secrets); everything else is server-only.
 
 ## 2. Backend endpoints to provision (contract)
 
-The frontend is built against this assumed REST contract (all `/api/v1`, Bearer + tenant-
-scoped). Each is isolated in a `lib/**/client.ts` so renames are a one-file change. **Until
-these exist the UI shows honest loading → unavailable/invitation states — never fake data.**
+The frontend talks to the backend through `/api/pb/*` (and the auth/copilot/upload routes),
+each isolated in a `lib/**/client.ts` so paths are a one-file change. **Endpoints the
+backend doesn't implement yet surface as honest loading → unavailable/invitation states —
+never fake data.**
 
-- **Auth (A1):** `POST /auth/login`, `POST /auth/signup` → `{ access_token, ... }` (JWT claims `sub,email,role,tenant_id,exp`).
-- **Copilot (A8):** `POST /copilot/chat` → SSE stream (`delta|citation|banner|confidence|tool|action|done|error`); page context arrives in `runtime_context.page_context`. Register the 4 app-action tools (`create_record`, `navigate`, `apply_filter`, `generate_report`).
+> **Wired to the live backend (no `/api/v1` prefix).** As of the contract bridge, the proxy
+> + clients target the deployed PetroBrain backend's real routes (verified on Render). Older
+> bullets below that still show `/api/v1` or assumed names are the *desired* contract for
+> endpoints not yet built — treat the bridged ones (auth, copilot, and the generic proxy) as
+> authoritative.
+
+- **Auth:** `POST /auth/signin`, `POST /auth/signup` (body `{ email, password }`) → `{ token, principal }` (JWT `token`; claims `sub,tenant_id,role,exp`). *(Bridged ✅)*
+- **Copilot:** `POST /chat` (body `{ message, module?, asset_context? }`) → JSON `{ answer, citations[], flags[], tool_results[] }`; the chat route adapts it into the UI's SSE `delta|citation|done` frames. *(Bridged ✅)* Future: streaming + per-turn history + the 4 app-action tools.
 - **Emissions:** `GET /emissions/scope-summary`, `GET|POST /emissions/sources`, `DELETE /emissions/sources/{id}` (undo), `GET /emissions/financed`, `POST /emissions/reports`, `GET /emissions/reconciliation/flaring`.
 - **Flaring:** `GET /flaring/assets|methane-intensity|zero-routine-tracker|opportunity`.
 - **Assets (A9):** `GET|POST /assets`, `GET|PATCH|DELETE /assets/{id}`, `POST /assets/import`.
