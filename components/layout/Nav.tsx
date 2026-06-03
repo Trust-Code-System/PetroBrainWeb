@@ -61,13 +61,13 @@ export function Nav() {
         </ul>
 
         <div className="flex items-center gap-2">
-          {/* External entry into the real product app. */}
-          <a
+          {/* Entry into the logged-in app (in-codebase auth at /login). */}
+          <Link
             href={ctas.app.href}
             className="hidden items-center rounded-sm px-3 py-2 text-sm text-secondary transition-colors hover:text-primary sm:inline-flex"
           >
             {ctas.app.label}
-          </a>
+          </Link>
           <Button href={ctas.primary.href} size="sm" className="hidden sm:inline-flex">
             {ctas.primary.label}
           </Button>
@@ -139,13 +139,13 @@ export function Nav() {
               ),
             )}
             <li className="mt-1">
-              <a
+              <Link
                 href={ctas.app.href}
                 onClick={() => setOpen(false)}
                 className="block rounded-md px-3 py-2.5 text-sm text-secondary hover:bg-surface-2 hover:text-primary"
               >
                 {ctas.app.label}
-              </a>
+              </Link>
             </li>
             <li className="mt-2 px-1">
               <Button href={ctas.primary.href} className="w-full" onClick={() => setOpen(false)}>

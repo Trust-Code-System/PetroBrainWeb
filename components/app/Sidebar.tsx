@@ -4,10 +4,11 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { appNav, isActiveRoute } from "@/lib/appNav";
+import { appNav, activeNavHref } from "@/lib/appNav";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { useChrome } from "@/components/app/ChromeProvider";
 import { navIcons, CloseIcon, CollapseIcon } from "@/components/app/icons";
+import { NavBadge } from "@/components/app/NavBadge";
 
 /**
  * Sidebar — the app's primary left navigation. Two presentations share one nav list:
@@ -118,6 +119,7 @@ export function Sidebar() {
 }
 
 function NavList({ collapsed, pathname }: { collapsed: boolean; pathname: string }) {
+  const activeHref = activeNavHref(pathname);
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="App sections">
       <ul className="space-y-4">
@@ -131,7 +133,7 @@ function NavList({ collapsed, pathname }: { collapsed: boolean; pathname: string
             {collapsed && <div className="mx-3 mb-2 border-t border-border-subtle" aria-hidden="true" />}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const active = isActiveRoute(item.href, pathname);
+                const active = item.href === activeHref;
                 const Icon = navIcons[item.icon];
                 return (
                   <li key={item.href}>
@@ -140,7 +142,7 @@ function NavList({ collapsed, pathname }: { collapsed: boolean; pathname: string
                       aria-current={active ? "page" : undefined}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        "flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors",
+                        "relative flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors",
                         collapsed && "justify-center px-0",
                         active
                           ? "bg-accent-muted text-primary"
@@ -155,6 +157,7 @@ function NavList({ collapsed, pathname }: { collapsed: boolean; pathname: string
                       ) : (
                         <span className="truncate">{item.label}</span>
                       )}
+                      {item.badgeKey && <NavBadge badgeKey={item.badgeKey} collapsed={collapsed} />}
                     </Link>
                   </li>
                 );

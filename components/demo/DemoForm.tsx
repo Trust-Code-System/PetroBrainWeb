@@ -215,6 +215,13 @@ function SuccessPanel({ name }: { name: string }) {
               <span className="font-medium text-primary">one business day</span> to set up your walkthrough.
               Prefer to pick a time now? Grab a slot below.
             </p>
+            <p className="mt-2 text-sm text-secondary">
+              Already have a workspace?{" "}
+              <Link href="/login" className="text-accent underline-offset-2 hover:underline">
+                Sign in
+              </Link>
+              .
+            </p>
           </div>
         </div>
       </div>

@@ -29,6 +29,14 @@ type ChromeContextValue = {
   copilotOpen: boolean;
   setCopilotOpen: (open: boolean) => void;
   toggleCopilot: () => void;
+  /**
+   * A prompt to pre-seed into the copilot's input — set by page invitations / suggested
+   * questions so a one-tap action opens the copilot with the request already staged.
+   * Null once consumed. (The copilot's actual reasoning is wired in a later task.)
+   */
+  copilotSeed: string | null;
+  openCopilotWith: (prompt: string) => void;
+  clearCopilotSeed: () => void;
 };
 
 const ChromeContext = createContext<ChromeContextValue | null>(null);
@@ -37,6 +45,7 @@ export function ChromeProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotSeed, setCopilotSeed] = useState<string | null>(null);
 
   // Restore persisted collapse preference after mount (avoids hydration mismatch).
   useEffect(() => {
@@ -58,6 +67,13 @@ export function ChromeProvider({ children }: { children: React.ReactNode }) {
 
   const toggleCopilot = useCallback(() => setCopilotOpen((v) => !v), []);
 
+  const openCopilotWith = useCallback((prompt: string) => {
+    setCopilotSeed(prompt);
+    setCopilotOpen(true);
+  }, []);
+
+  const clearCopilotSeed = useCallback(() => setCopilotSeed(null), []);
+
   const value = useMemo<ChromeContextValue>(
     () => ({
       collapsed,
@@ -67,8 +83,20 @@ export function ChromeProvider({ children }: { children: React.ReactNode }) {
       copilotOpen,
       setCopilotOpen,
       toggleCopilot,
+      copilotSeed,
+      openCopilotWith,
+      clearCopilotSeed,
     }),
-    [collapsed, toggleCollapsed, mobileOpen, copilotOpen, toggleCopilot],
+    [
+      collapsed,
+      toggleCollapsed,
+      mobileOpen,
+      copilotOpen,
+      toggleCopilot,
+      copilotSeed,
+      openCopilotWith,
+      clearCopilotSeed,
+    ],
   );
 
   return <ChromeContext.Provider value={value}>{children}</ChromeContext.Provider>;

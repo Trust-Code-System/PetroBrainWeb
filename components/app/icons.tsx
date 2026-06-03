@@ -56,6 +56,14 @@ export const navIcons: Record<AppIconKey, (p: IconProps) => React.ReactNode> = {
       <path d="M12 7v10M9.5 9.2c0-1 1.1-1.7 2.5-1.7s2.5.7 2.5 1.7c0 2.6-5 1.3-5 3.9 0 1 1.1 1.7 2.5 1.7s2.5-.7 2.5-1.7" />
     </Svg>
   ),
+  opportunities: (p) => (
+    <Svg {...p}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" />
+      <path d="M14 3v5h5" />
+      <circle cx="16.5" cy="15.5" r="3.5" />
+      <path d="M19 18l2.5 2.5" />
+    </Svg>
+  ),
   emissions: (p) => (
     <Svg {...p}>
       <path d="M8 19a4 4 0 0 1-1-7.9A5 5 0 0 1 17 10a3.5 3.5 0 0 1 .5 7H8z" />
@@ -166,12 +174,16 @@ export function BellIcon({ className }: IconProps) {
   );
 }
 
+/**
+ * SparkleIcon — the copilot / "ask PetroBrain" sign. Uses the PetroBrain oil-drop mark as
+ * a monochrome `currentColor` silhouette so it reads as the brand wherever it appears
+ * (the orange launcher bubble, accent chips, assistant avatars) and adapts to context.
+ */
 export function SparkleIcon({ className }: IconProps) {
   return (
-    <Svg className={className}>
-      <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z" />
-      <path d="M19 14l.7 1.8L21.5 16.5 19.7 17.2 19 19l-.7-1.8L16.5 16.5l1.8-.7L19 14z" />
-    </Svg>
+    <svg viewBox="0 0 64 64" className={className ?? "h-5 w-5"} fill="currentColor" aria-hidden="true">
+      <path d="M32 4 C32 4 11 27 11 41.5 a21 21 0 1 0 42 0 C53 27 32 4 32 4 Z" />
+    </svg>
   );
 }
 

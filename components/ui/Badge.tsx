@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
  *
  * Usage: <Badge tone="info">Beta</Badge>
  */
-type Tone = "neutral" | "accent" | "safe" | "warn" | "danger" | "info";
+export type Tone = "neutral" | "accent" | "safe" | "warn" | "danger" | "info";
 
 const toneClass: Record<Tone, string> = {
   neutral: "bg-surface-2 text-secondary border-border-strong",
@@ -30,7 +30,7 @@ export function Badge({ children, tone = "neutral", dot = false, className }: Ba
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-0.5 text-xs font-medium leading-5",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm border px-2.5 py-0.5 text-xs font-medium leading-5",
         toneClass[tone],
         className,
       )}

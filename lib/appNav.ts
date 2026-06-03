@@ -10,6 +10,7 @@ export type AppIconKey =
   | "market"
   | "asset"
   | "cost"
+  | "opportunities"
   | "emissions"
   | "flaring"
   | "climate"
@@ -22,10 +23,15 @@ export type AppIconKey =
   | "settings"
   | "profile";
 
+/** Keys for live count badges rendered next to a nav item (see components/app/NavBadge.tsx). */
+export type NavBadgeKey = "opportunities-unread";
+
 export type AppNavItem = {
   label: string;
   href: string;
   icon: AppIconKey;
+  /** Optional live count badge (e.g. unread updates on watched licensing rounds). */
+  badgeKey?: NavBadgeKey;
 };
 
 export type AppNavGroup = {
@@ -41,9 +47,16 @@ export const appNav: AppNavGroup[] = [
   {
     heading: "Intelligence",
     items: [
+      { label: "Cross-domain", href: "/app/intelligence", icon: "market" },
       { label: "Market", href: "/app/intelligence/market", icon: "market" },
       { label: "Asset", href: "/app/intelligence/asset", icon: "asset" },
       { label: "Cost Intelligence", href: "/app/intelligence/cost", icon: "cost" },
+      {
+        label: "Opportunities",
+        href: "/app/opportunities",
+        icon: "opportunities",
+        badgeKey: "opportunities-unread",
+      },
     ],
   },
   {
@@ -95,7 +108,18 @@ export function getPageTitle(pathname: string): string {
   return match?.label ?? "PetroBrain";
 }
 
-/** True when a nav item is the active route (exact for /app, prefix otherwise). */
-export function isActiveRoute(href: string, pathname: string): boolean {
-  return href === "/app" ? pathname === "/app" : pathname.startsWith(href);
+/**
+ * The single active nav href for a pathname: the LONGEST nav item whose href the path
+ * matches (exact, or a `/`-segment prefix). Longest-match means an index route like
+ * /app/intelligence doesn't also light up when a sub-route (/app/intelligence/market) is
+ * active — only the most specific item highlights.
+ */
+export function activeNavHref(pathname: string): string | null {
+  let best: string | null = null;
+  for (const item of appNavItems) {
+    if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+      if (!best || item.href.length > best.length) best = item.href;
+    }
+  }
+  return best;
 }

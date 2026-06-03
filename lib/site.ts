@@ -26,9 +26,9 @@ export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001"
 export const ctas = {
   primary: { label: "Book a demo", href: "/demo" },
   secondary: { label: "MRV readiness check", href: "/mrv" },
-  /** Entry into the logged-in app. Now in-codebase at /app (was the external appUrl);
-      becomes /login once auth lands in Task 2. */
-  app: { label: "Sign in", href: "/app" },
+  /** Entry into the logged-in app. Points at /login (auth, Task 2); middleware sends an
+      authenticated user straight on to /app. */
+  app: { label: "Log in", href: "/login" },
 } as const;
 
 export type NavItem = { label: string; href: string };
