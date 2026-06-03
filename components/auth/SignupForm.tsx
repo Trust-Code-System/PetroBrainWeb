@@ -50,17 +50,19 @@ export function SignupForm() {
     setErrors({});
 
     setStatus("submitting");
-    const { error } = await authClient.signUp.email({
-      name: values.fullName.trim(),
-      email: values.email.trim(),
-      password: values.password,
-    });
-    if (error) {
+    try {
+      // The Neon Auth client both returns { error } and (on some failures) throws — handle both.
+      const res = await authClient.signUp.email({
+        name: values.fullName.trim(),
+        email: values.email.trim(),
+        password: values.password,
+      });
+      if (res?.error) throw new Error(res.error.message || "We couldn’t create your account.");
+      window.location.assign("/app");
+    } catch (err) {
       setStatus("error");
-      setSubmitError(error.message ?? "We couldn’t create your account.");
-      return;
+      setSubmitError(err instanceof Error ? err.message : "We couldn’t create your account.");
     }
-    window.location.assign("/app");
   }
 
   const submitting = status === "submitting";

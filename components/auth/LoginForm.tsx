@@ -44,14 +44,16 @@ export function LoginForm({ next }: { next?: string }) {
     setErrors({});
 
     setStatus("submitting");
-    const { error } = await authClient.signIn.email({ email: email.trim(), password });
-    if (error) {
+    try {
+      // The Neon Auth client both returns { error } and (on some failures) throws — handle both.
+      const res = await authClient.signIn.email({ email: email.trim(), password });
+      if (res?.error) throw new Error(res.error.message || "Invalid email or password.");
+      // Full navigation: the server shell reads the new session and hydrates identity.
+      window.location.assign(safeNext(next));
+    } catch (err) {
       setStatus("error");
-      setSubmitError(error.message ?? "Invalid email or password.");
-      return;
+      setSubmitError(err instanceof Error ? err.message : "Invalid email or password.");
     }
-    // Full navigation: the server shell reads the new session and hydrates identity.
-    window.location.assign(safeNext(next));
   }
 
   const submitting = status === "submitting";
