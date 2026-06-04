@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # .npmrc sets legacy-peer-deps=true, which `npm ci` honours — required for the
+      # bleeding-edge majors (Next 16 / React 19 / beta auth) to resolve.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # Build needs the Neon Auth env (createNeonAuth validates the cookie secret length at
+      # module load). These are throwaway build-time values — auth makes no network call at
+      # construction, and every authenticated page is force-dynamic so nothing real is hit.
+      - name: Build
+        run: npm run build
+        env:
+          NEON_AUTH_BASE_URL: https://ci.neonauth.invalid/neondb/auth
+          NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
+          PETROBRAIN_API_URL: https://api.invalid
+
+  e2e:
+    name: e2e · accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+        env:
+          NEON_AUTH_BASE_URL: https://ci.neonauth.invalid/neondb/auth
+          NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
+          PETROBRAIN_API_URL: https://api.invalid
+
+      # Playwright starts the built app via its webServer config and runs smoke + axe a11y.
+      - name: E2E + a11y
+        run: npm run test:e2e
+
+      - name: Upload report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
