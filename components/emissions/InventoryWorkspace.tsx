@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Gauge } from "@/components/ui/charts/Gauge";
+import { BarList } from "@/components/ui/charts/BarList";
 import { cn } from "@/lib/cn";
 import { useChrome } from "@/components/app/ChromeProvider";
 import { useActiveAsset } from "@/components/app/ActiveAssetProvider";
@@ -236,7 +237,12 @@ export function InventoryWorkspace() {
       <div className="min-w-0 space-y-6">
         {/* Config */}
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-primary">Build an inventory</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-primary">Build an inventory</h2>
+            <p className="mt-0.5 text-sm text-secondary">
+              The facility and period this inventory covers, and the reporting basis.
+            </p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Facility" value={cfg.facility_id} onChange={(v) => setCfg((p) => ({ ...p, facility_id: v }))} placeholder="facility-1" />
             <Field label="Period" value={cfg.period} onChange={(v) => setCfg((p) => ({ ...p, period: v }))} placeholder="2026-05" />
@@ -270,44 +276,56 @@ export function InventoryWorkspace() {
             </Button>
           </div>
           <div className="space-y-4">
-            {sources.map((s) => (
-              <div key={s.uid} className="rounded-lg border border-border-subtle bg-surface-2 p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Source id" value={s.source_id} onChange={(v) => patchSource(s.uid, { source_id: v })} placeholder="flare-1" />
-                  <div>
-                    <Label>Type</Label>
-                    <Select
-                      options={SOURCE_TYPES}
-                      value={s.source_type}
-                      onChange={(v) => patchSource(s.uid, { source_type: v as SourceType, fields: {} })}
-                    />
+            {sources.map((s, i) => {
+              const typeLabel = SOURCE_TYPES.find((t) => t.value === s.source_type)?.label ?? s.source_type;
+              return (
+                <div key={s.uid} className="rounded-lg border border-border-subtle bg-surface-2 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10 font-mono text-xs font-semibold text-accent">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm font-semibold text-primary">{typeLabel}</span>
+                    </div>
+                    {sources.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setSources((p) => p.filter((x) => x.uid !== s.uid))}
+                        className="rounded-md p-1 text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+                        aria-label={`Remove source ${i + 1}`}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Source id" value={s.source_id} onChange={(v) => patchSource(s.uid, { source_id: v })} placeholder="flare-1" />
+                    <div>
+                      <Label>Type</Label>
+                      <Select
+                        options={SOURCE_TYPES}
+                        value={s.source_type}
+                        onChange={(v) => patchSource(s.uid, { source_type: v as SourceType, fields: {} })}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {FIELDS[s.source_type].map((f) => (
+                      <Field
+                        key={f.key}
+                        label={f.label}
+                        value={s.fields[f.key] ?? ""}
+                        onChange={(v) => patchField(s.uid, f.key, v)}
+                        placeholder={f.placeholder}
+                        inputMode={f.text ? undefined : "decimal"}
+                      />
+                    ))}
                   </div>
                 </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {FIELDS[s.source_type].map((f) => (
-                    <Field
-                      key={f.key}
-                      label={f.label}
-                      value={s.fields[f.key] ?? ""}
-                      onChange={(v) => patchField(s.uid, f.key, v)}
-                      placeholder={f.placeholder}
-                      inputMode={f.text ? undefined : "decimal"}
-                    />
-                  ))}
-                </div>
-                {sources.length > 1 && (
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setSources((p) => p.filter((x) => x.uid !== s.uid))}
-                      className="text-xs text-faint hover:text-danger"
-                    >
-                      Remove source
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {build.isError && (
@@ -327,7 +345,14 @@ export function InventoryWorkspace() {
           </div>
         </Card>
 
-        {result && <InventoryResultView result={result} />}
+        {result ? (
+          <InventoryResultView result={result} />
+        ) : (
+          <EmptyResult
+            building={build.isPending}
+            onAsk={() => openCopilotWith("Help me build an emissions inventory for NUPRC Tier-3 MRV.")}
+          />
+        )}
       </div>
 
       {/* Saved inventories */}
@@ -361,6 +386,53 @@ export function InventoryWorkspace() {
         </Card>
       </aside>
     </div>
+  );
+}
+
+function EmptyResult({ building, onAsk }: { building: boolean; onAsk: () => void }) {
+  if (building) {
+    return (
+      <Card className="space-y-4">
+        <Skeleton className="h-6 w-40" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+        <Skeleton className="h-40 w-full" />
+      </Card>
+    );
+  }
+  return (
+    <Card className="flex flex-col items-center gap-3 py-12 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+        <SparkleIcon className="h-6 w-6" />
+      </span>
+      <div className="space-y-1">
+        <h3 className="text-base font-semibold text-primary">Your inventory result will appear here</h3>
+        <p className="mx-auto max-w-md text-sm text-secondary">
+          Set the facility and period above, add one or more emission sources with their
+          parameters, then <span className="font-medium text-primary">Build inventory</span>. The
+          engine computes CO₂e, the tier summary, your GHGEMP report and the MRV-readiness gaps.
+        </p>
+      </div>
+      <div className="mt-1 rounded-lg border border-border-subtle bg-surface-2 px-4 py-2 text-left">
+        <p className="text-[11px] uppercase tracking-wider text-faint">Example</p>
+        <p className="text-sm text-secondary">
+          A flaring source: gas volume <span className="font-mono text-primary">1,000,000 scf</span>,
+          CH₄ <span className="font-mono text-primary">0.8</span>, combustion efficiency{" "}
+          <span className="font-mono text-primary">0.98</span>.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onAsk}
+        className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-accent underline-offset-2 hover:underline"
+      >
+        <SparkleIcon className="h-4 w-4" />
+        Or ask the copilot to set it up
+      </button>
+    </Card>
   );
 }
 
@@ -494,6 +566,25 @@ function InventoryResultView({ result }: { result: InventoryResult }) {
       {/* Source inventory */}
       <Card>
         <h3 className="mb-3 text-sm font-semibold text-primary">Source inventory</h3>
+        {inv.lines.length > 1 && (
+          <div className="mb-4 border-b border-border-subtle pb-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-faint">
+              Contribution by source
+            </p>
+            <BarList
+              unit="tCO₂e"
+              format={(n) => fmtNum(n)}
+              items={[...inv.lines]
+                .sort((a, b) => (b.co2e_tonnes ?? 0) - (a.co2e_tonnes ?? 0))
+                .map((l, i) => ({
+                  label: l.source_id,
+                  sublabel: l.source_type,
+                  value: l.co2e_tonnes ?? 0,
+                  active: i === 0,
+                }))}
+            />
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="font-mono text-[11px] uppercase tracking-wider text-faint">
