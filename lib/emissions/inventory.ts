@@ -92,12 +92,49 @@ export interface InventoryResult {
   created_utc?: string;
 }
 
+/**
+ * Row shape returned by `GET /emissions/inventories` — a *flat summary*, NOT a full
+ * InventoryResult (the engine output is only persisted on the by-id record's `response`).
+ */
+export interface InventorySummary {
+  inventory_id: string;
+  facility_id: string;
+  period: string;
+  operator?: string;
+  asset?: string;
+  status: string;
+  tier_readiness_pct?: number;
+  gap_count?: number;
+  total_co2e_tonnes: number;
+  audit_sha256?: string;
+  created_utc?: string;
+}
+
+/** Stored record from `GET /emissions/inventories/{id}` — the full result lives in `response`. */
+interface StoredInventoryRecord {
+  inventory_id: string;
+  created_utc?: string;
+  request?: unknown;
+  response: {
+    inventory: InventoryData;
+    ghgemp_report: GhgempReport;
+    mrv_readiness: MrvReadiness;
+  };
+}
+
 export const inventoryApi = {
   build: (input: BuildInventoryInput) => pbPost<InventoryResult>(`emissions/inventory`, input),
   list: (signal?: AbortSignal) =>
-    pbGet<{ inventories?: InventoryResult[] }>(`emissions/inventories`, signal),
-  get: (id: string, signal?: AbortSignal) =>
-    pbGet<InventoryResult>(`emissions/inventories/${encodeURIComponent(id)}`, signal),
+    pbGet<{ inventories?: InventorySummary[] }>(`emissions/inventories`, signal),
+  // The by-id record nests the engine output under `response`; lift it back into the
+  // InventoryResult shape the UI renders, re-attaching the id/timestamp.
+  get: async (id: string, signal?: AbortSignal): Promise<InventoryResult> => {
+    const rec = await pbGet<StoredInventoryRecord>(
+      `emissions/inventories/${encodeURIComponent(id)}`,
+      signal,
+    );
+    return { ...rec.response, inventory_id: rec.inventory_id, created_utc: rec.created_utc };
+  },
 };
 
 export const inventoryKeys = {

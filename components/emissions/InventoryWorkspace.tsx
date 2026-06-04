@@ -14,6 +14,7 @@ import { useRegisterPageContext } from "@/components/copilot/PageContextProvider
 import { SparkleIcon } from "@/components/app/icons";
 import { fmtNum } from "@/lib/emissions/labels";
 import {
+  inventoryApi,
   useBuildInventory,
   useInventories,
   type BuildInventoryInput,
@@ -169,6 +170,18 @@ export function InventoryWorkspace() {
   });
   const [sources, setSources] = useState<SourceDraft[]>([newDraft()]);
   const [result, setResult] = useState<InventoryResult | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  async function loadSaved(id: string) {
+    setLoadingId(id);
+    try {
+      setResult(await inventoryApi.get(id));
+    } catch {
+      /* leave the current result in place if the fetch fails */
+    } finally {
+      setLoadingId(null);
+    }
+  }
 
   useRegisterPageContext({
     filters: { facility: cfg.facility_id || null, period: cfg.period, gwp_set: cfg.gwp_set },
@@ -323,18 +336,20 @@ export function InventoryWorkspace() {
             <p className="text-sm text-faint">None yet — build one to see it here.</p>
           ) : (
             <ul className="space-y-1.5">
-              {inventories.map((inv, i) => (
-                <li key={inv.inventory_id ?? i}>
+              {inventories.map((inv) => (
+                <li key={inv.inventory_id}>
                   <button
                     type="button"
-                    onClick={() => setResult(inv)}
-                    className="w-full rounded-md border border-border-subtle bg-surface-2 px-3 py-2 text-left text-sm hover:border-accent/50"
+                    onClick={() => loadSaved(inv.inventory_id)}
+                    disabled={loadingId === inv.inventory_id}
+                    className="w-full rounded-md border border-border-subtle bg-surface-2 px-3 py-2 text-left text-sm hover:border-accent/50 disabled:opacity-60"
                   >
                     <span className="block truncate text-primary">
-                      {inv.inventory.facility_id} · {inv.inventory.period}
+                      {inv.facility_id} · {inv.period}
                     </span>
                     <span className="text-xs text-faint">
-                      {fmtNum(inv.inventory.totals.co2e_tonnes)} tCO₂e · {inv.mrv_readiness.status}
+                      {fmtNum(inv.total_co2e_tonnes)} tCO₂e · {inv.status.replace(/_/g, " ")}
+                      {loadingId === inv.inventory_id ? " · loading…" : ""}
                     </span>
                   </button>
                 </li>
