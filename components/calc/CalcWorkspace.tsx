@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useRegisterPageContext } from "@/components/copilot/PageContextProvider";
@@ -8,9 +8,10 @@ import { CalcCatalog } from "./CalcCatalog";
 import { CalcForm } from "./CalcForm";
 import { CalcResultPanel } from "./CalcResultPanel";
 import { RecentCalcs } from "./RecentCalcs";
-import { CALC_CATALOG, calcById } from "@/lib/calc/catalog";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Banner } from "@/components/ui/Banner";
 import { getRecentCalcs, pushRecentCalc } from "@/lib/calc/recent";
-import { useRunCalc } from "@/lib/calc/hooks";
+import { useCalcCatalog, useRunCalc } from "@/lib/calc/hooks";
 import type { CalcInputs, CalcResult } from "@/lib/calc/types";
 
 /**
@@ -20,12 +21,20 @@ import type { CalcInputs, CalcResult } from "@/lib/calc/types";
  * context (the copilot can also run any calc via its tools).
  */
 export function CalcWorkspace() {
-  const [selectedId, setSelectedId] = useState<string>(CALC_CATALOG[0]?.id ?? "");
+  const catalogQ = useCalcCatalog();
+  const catalog = useMemo(() => catalogQ.data ?? [], [catalogQ.data]);
+  const [selectedId, setSelectedId] = useState<string>("");
   const [result, setResult] = useState<CalcResult | null>(null);
   const [recent, setRecent] = useState<CalcResult[]>([]);
   const run = useRunCalc();
 
-  const def = calcById(selectedId);
+  // Default to the first calc once the backend catalog loads.
+  useEffect(() => {
+    const first = catalog[0];
+    if (!selectedId && first) setSelectedId(first.id);
+  }, [catalog, selectedId]);
+
+  const def = catalog.find((c) => c.id === selectedId);
 
   useEffect(() => {
     setRecent(getRecentCalcs());
@@ -64,11 +73,30 @@ export function CalcWorkspace() {
     run.reset();
   }
 
+  if (catalogQ.isLoading) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[14rem_1fr_16rem]">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-72 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+  if (catalogQ.isError || catalog.length === 0) {
+    return (
+      <Banner variant={catalogQ.isError ? "danger" : "info"} title="Calculations unavailable">
+        {catalogQ.isError
+          ? "Couldn’t load the calculation catalog. Please try again."
+          : "No calculations are available yet."}
+      </Banner>
+    );
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[14rem_1fr_16rem]">
       {/* Catalog */}
       <aside className="lg:sticky lg:top-20 lg:self-start">
-        <CalcCatalog selectedId={selectedId} onSelect={selectCalc} />
+        <CalcCatalog catalog={catalog} selectedId={selectedId} onSelect={selectCalc} />
       </aside>
 
       {/* Form + result */}

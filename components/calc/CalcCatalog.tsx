@@ -1,28 +1,32 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { CALC_CATALOG, CALC_CATEGORIES, CALC_CATEGORY_LABEL } from "@/lib/calc/catalog";
+import { CALC_CATEGORIES, CALC_CATEGORY_LABEL } from "@/lib/calc/catalog";
+import type { CalcDef } from "@/lib/calc/types";
 
 /**
- * CalcCatalog — the calc picker, grouped by category. A small amber dot marks
- * safety-critical calcs (the authoritative flag still comes from the engine result).
+ * CalcCatalog — the calc picker, grouped by category, from the backend-sourced catalog. A
+ * small amber dot marks safety-critical calcs (the authoritative flag still comes from the
+ * engine result). Empty categories are hidden.
  */
 export function CalcCatalog({
+  catalog,
   selectedId,
   onSelect,
 }: {
+  catalog: CalcDef[];
   selectedId: string;
   onSelect: (id: string) => void;
 }) {
   return (
     <nav aria-label="Calculations" className="space-y-4">
-      {CALC_CATEGORIES.map((cat) => (
+      {CALC_CATEGORIES.filter((cat) => catalog.some((c) => c.category === cat)).map((cat) => (
         <div key={cat}>
           <p className="px-2 pb-1 font-mono text-xs uppercase tracking-wider text-faint">
             {CALC_CATEGORY_LABEL[cat]}
           </p>
           <ul className="space-y-0.5">
-            {CALC_CATALOG.filter((c) => c.category === cat).map((c) => (
+            {catalog.filter((c) => c.category === cat).map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
