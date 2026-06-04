@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Banner } from "@/components/ui/Banner";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Gauge } from "@/components/ui/charts/Gauge";
+import { cn } from "@/lib/cn";
 import { useChrome } from "@/components/app/ChromeProvider";
 import { useActiveAsset } from "@/components/app/ActiveAssetProvider";
 import { useRegisterPageContext } from "@/components/copilot/PageContextProvider";
@@ -362,97 +364,182 @@ export function InventoryWorkspace() {
   );
 }
 
+function StatTile({
+  label,
+  value,
+  unit,
+  accent,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-4",
+        accent ? "border-accent/40 bg-accent/5" : "border-border-subtle bg-surface-2",
+      )}
+    >
+      <p className="font-mono text-[11px] uppercase tracking-wider text-faint">{label}</p>
+      <p
+        className={cn(
+          "mt-1 font-mono font-semibold tabular-nums",
+          accent ? "text-3xl text-primary" : "text-2xl text-primary",
+        )}
+      >
+        {fmtNum(value)}
+        <span className="ml-1 text-xs font-normal text-secondary">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
 function InventoryResultView({ result }: { result: InventoryResult }) {
   const { inventory: inv, ghgemp_report: rpt, mrv_readiness: rdy } = result;
+  const pct = typeof rdy.tier_readiness_pct === "number" ? rdy.tier_readiness_pct : null;
+  const linesTotal = inv.lines.reduce((a, l) => a + (l.co2e_tonnes ?? 0), 0);
+
   return (
-    <div className="space-y-4">
-      {/* Totals */}
-      <Card>
-        <p className="font-mono text-xs uppercase tracking-wider text-faint">Total CO₂e ({inv.totals.gwp_set})</p>
-        <p className="mt-1 font-mono text-3xl font-semibold tabular-nums text-primary">
-          {fmtNum(inv.totals.co2e_tonnes)} <span className="text-base font-normal text-secondary">tCO₂e</span>
-        </p>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm text-secondary">
-          <span>CO₂ {fmtNum(inv.totals.co2_tonnes)} t</span>
-          <span>CH₄ {fmtNum(inv.totals.ch4_tonnes)} t</span>
-          <span>N₂O {fmtNum(inv.totals.n2o_tonnes)} t</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {Object.entries(inv.tier_summary).map(([tier, n]) => (
-            <Badge key={tier} tone="neutral">{tier}: {n}</Badge>
-          ))}
-        </div>
-      </Card>
-
-      {/* MRV readiness */}
-      <Card className="space-y-2">
+    <div className="space-y-6">
+      {/* Headline KPI tiles */}
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-primary">MRV readiness — {rdy.target_tier}</h3>
-          <Badge tone={statusTone(rdy.status)}>{rdy.status.replace(/_/g, " ")}</Badge>
-        </div>
-        {typeof rdy.tier_readiness_pct === "number" && (
-          <p className="text-sm text-secondary">Tier readiness: {rdy.tier_readiness_pct}%</p>
-        )}
-        {rdy.priority_gaps && rdy.priority_gaps.length > 0 && (
-          <div>
-            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-faint">Priority gaps</p>
-            <ul className="mt-1 space-y-1">
-              {rdy.priority_gaps.map((g, i) => (
-                <li key={i} className="text-sm text-secondary">
-                  {g.source_id} ({g.source_type}) — at {g.current_tier ?? "—"}
-                </li>
-              ))}
-            </ul>
+          <h2 className="text-lg font-semibold tracking-tight text-primary">Inventory result</h2>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge tone="info">GWP {inv.totals.gwp_set}</Badge>
+            {Object.entries(inv.tier_summary).map(([tier, n]) => (
+              <Badge key={tier} tone="neutral">
+                {tier}: {n}
+              </Badge>
+            ))}
           </div>
-        )}
-      </Card>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile label="Total CO₂e" value={inv.totals.co2e_tonnes} unit="tCO₂e" accent />
+          <StatTile label="CO₂" value={inv.totals.co2_tonnes} unit="t" />
+          <StatTile label="CH₄" value={inv.totals.ch4_tonnes} unit="t" />
+          <StatTile label="N₂O" value={inv.totals.n2o_tonnes} unit="t" />
+        </div>
+      </section>
 
-      {/* Lines */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* MRV readiness */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-primary">
+              MRV readiness{rdy.target_tier ? ` — ${rdy.target_tier}` : ""}
+            </h3>
+            <Badge tone={statusTone(rdy.status)}>{rdy.status.replace(/_/g, " ")}</Badge>
+          </div>
+          {pct !== null && (
+            <Gauge
+              label="Tier readiness"
+              value={pct}
+              max={100}
+              unit="%"
+              valueTone={pct >= 80 ? "bg-safe" : pct > 0 ? "bg-warn" : "bg-danger"}
+            />
+          )}
+          {rdy.priority_gaps && rdy.priority_gaps.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-faint">
+                Priority gaps ({rdy.gap_count ?? rdy.priority_gaps.length})
+              </p>
+              <ul className="space-y-1.5">
+                {rdy.priority_gaps.map((g, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between rounded-md bg-surface-2 px-3 py-2 text-sm"
+                  >
+                    <span className="text-primary">{g.source_id}</span>
+                    <span className="text-xs text-faint">
+                      {g.source_type} · at {g.current_tier ?? "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+
+        {/* GHGEMP report */}
+        <Card className="space-y-3">
+          <h3 className="text-sm font-semibold text-primary">{rpt.report_type ?? "GHGEMP report"}</h3>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <Meta label="Operator" value={rpt.operator} />
+            <Meta label="Asset" value={rpt.asset} />
+            <Meta label="Period" value={rpt.reporting_period} />
+            <Meta label="GWP basis" value={rpt.gwp_basis} />
+          </dl>
+          {rpt.compliance_flags && rpt.compliance_flags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {rpt.compliance_flags.map((flag) => (
+                <Badge key={flag} tone="warn">
+                  {flag}
+                </Badge>
+              ))}
+            </div>
+          )}
+          {rpt.audit_sha256 && (
+            <div className="rounded-md bg-surface-2 px-3 py-2">
+              <p className="text-[11px] uppercase tracking-wider text-faint">Audit hash</p>
+              <p className="break-all font-mono text-xs text-secondary">{rpt.audit_sha256}</p>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Source inventory */}
       <Card>
-        <h3 className="mb-2 text-sm font-semibold text-primary">Source inventory</h3>
+        <h3 className="mb-3 text-sm font-semibold text-primary">Source inventory</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left font-mono text-[11px] uppercase tracking-wider text-faint">
-              <tr>
-                <th className="py-1.5 pr-3">Source</th>
-                <th className="py-1.5 pr-3">Type</th>
-                <th className="py-1.5 pr-3">Scope</th>
-                <th className="py-1.5 text-right">tCO₂e</th>
+            <thead className="font-mono text-[11px] uppercase tracking-wider text-faint">
+              <tr className="border-b border-border-subtle">
+                <th className="py-2 pr-3 text-left font-medium">Source</th>
+                <th className="py-2 pr-3 text-left font-medium">Type</th>
+                <th className="py-2 pr-3 text-left font-medium">Scope</th>
+                <th className="py-2 text-right font-medium">tCO₂e</th>
               </tr>
             </thead>
             <tbody>
               {inv.lines.map((l, i) => (
-                <tr key={i} className="border-t border-border-subtle">
-                  <td className="py-1.5 pr-3 text-primary">{l.source_id}</td>
-                  <td className="py-1.5 pr-3 text-secondary">{l.source_type}</td>
-                  <td className="py-1.5 pr-3 text-secondary">{(l.scope ?? "").replace("scope_", "Scope ")}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums text-primary">
+                <tr key={i} className="border-b border-border-subtle/60 last:border-0">
+                  <td className="py-2.5 pr-3 font-medium text-primary">{l.source_id}</td>
+                  <td className="py-2.5 pr-3 text-secondary">{l.source_type}</td>
+                  <td className="py-2.5 pr-3 text-secondary">
+                    {(l.scope ?? "").replace("scope_", "Scope ") || "—"}
+                  </td>
+                  <td className="py-2.5 text-right font-mono tabular-nums text-primary">
                     {l.co2e_tonnes != null ? fmtNum(l.co2e_tonnes) : "—"}
                   </td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-border-strong">
+                <td className="py-2.5 pr-3 font-medium text-secondary" colSpan={3}>
+                  Total
+                </td>
+                <td className="py-2.5 text-right font-mono font-semibold tabular-nums text-primary">
+                  {fmtNum(linesTotal)}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
 
-      {/* GHGEMP report */}
-      <Card className="space-y-2">
-        <h3 className="text-sm font-semibold text-primary">{rpt.report_type ?? "GHGEMP report"}</h3>
-        <p className="text-sm text-secondary">
-          {rpt.operator} · {rpt.asset} · {rpt.reporting_period} · GWP {rpt.gwp_basis}
-        </p>
-        {rpt.compliance_flags && rpt.compliance_flags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {rpt.compliance_flags.map((flag) => (
-              <Badge key={flag} tone="warn">{flag}</Badge>
-            ))}
-          </div>
-        )}
-        {rpt.audit_sha256 && (
-          <p className="break-all font-mono text-xs text-faint">audit: {rpt.audit_sha256}</p>
-        )}
-      </Card>
+function Meta({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] uppercase tracking-wider text-faint">{label}</dt>
+      <dd className="text-primary">{value ?? "—"}</dd>
     </div>
   );
 }
