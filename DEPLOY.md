@@ -86,6 +86,40 @@ never fake data.**
 CORS: the backend only ever sees server-to-server calls from the Next proxy, so no browser
 CORS config is needed for these.
 
+### 2a. Page ↔ backend status (live audit — June 2026)
+
+What the **deployed** backend (`petrobrain-api.onrender.com`) actually implements vs. what each
+`/app` page assumes. "Reconciled" = the frontend client was mapped to the real backend shape
+and verified end-to-end against the live API.
+
+| Page / feature | Backend endpoint(s) | Status |
+|---|---|---|
+| **Auth** (login/signup) | `/auth/signin`, `/auth/signup` (Neon JWT verified via JWKS) | ✅ working |
+| **Copilot** | `POST /chat` (JSON→SSE adapter) | ✅ working |
+| **Assets** | `GET/POST/PATCH /assets` (`{assets}`, attributes) | ✅ reconciled (no DELETE backend-side) |
+| **Calc** | `GET /calc/catalog`, `POST /calc` | ✅ reconciled (backend audit-write made best-effort) |
+| **Documents** | `GET /documents` | ✅ list reconciled; ⚠️ **no binary upload** (text ingest only, PDF = plug-point) |
+| **Dashboard** | market = public data ✅; KPIs use `/assets` ✅ | ✅ partial (scope/flaring KPIs + notifications are honest invitations) |
+| **Emissions & MRV** | backend has `POST /emissions/inventory` + `GET /emissions/inventories` (batch **inventory** model) | ⛔ **page rework** — frontend assumes `scope-summary`/`sources`/`financed`/`reports`/`reconciliation` which don't exist; needs rebuilding around the inventory model |
+| **Intelligence – Market/Cross-domain** | public-data layer + `/chat` | ✅ working (market tiles + cross-domain copilot) |
+| **Intelligence – Cost** | `GET /intelligence/costs` | ⛔ not implemented backend-side → honest "couldn't load" |
+| **Flaring & Methane** | `GET /flaring/*` | ⛔ not implemented → honest empty (satellite = public World Bank, gated) |
+| **Climate Risk** | `GET /climate-risk/*` | ⛔ not implemented → honest empty |
+| **Analytics** | `GET /analytics/*` | ⛔ not implemented → honest empty |
+| **Reports** | `GET/POST /reports/*` | ⛔ not implemented → honest empty |
+| **Data Tools** | `/data/*` | ⛔ not implemented → honest empty |
+| **Opportunities** | `/opportunities/*` | ⛔ not implemented → honest empty (as designed) |
+| **Settings / Profile** | `/profile`, `/org`, `/settings`, `/team`, `/memory` | ⛔ not implemented → defaults/empty |
+| **Notifications** | `GET /notifications` | ⛔ not implemented → empty bell |
+
+Backend also implements (no dedicated UI yet): `/well-control/kill-sheet`, `/docs/snapshot`,
+`/assets/{id}/path|descendants|relationships`, `/admin/*` (tenants, users, audit, permits,
+data-readiness).
+
+**Cross-cutting:** all Neon users currently resolve to one tenant (`default_signup_tenant_id`)
+— per-user tenant/role mapping is a backend follow-up. Render free tier cold-starts (~50s) can
+500/﻿time-out the *first* request after idle.
+
 ---
 
 ## 3. Pre-deploy gate (all green)
