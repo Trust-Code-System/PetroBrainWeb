@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getBackendAccessToken } from "@/lib/auth/server";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { validateUpload, UPLOAD_RULES } from "@/lib/uploads";
 
 /**
- * Asset bulk-import proxy (multipart CSV/Excel → backend). Binary-safe raw passthrough with
- * the Bearer token, like the documents / data-import / avatar routes.
+ * Asset bulk-import proxy (multipart CSV/Excel → backend). Validates size + file type at the
+ * edge (see lib/uploads), then re-forwards the multipart with the Bearer token.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const API_URL = (process.env.PETROBRAIN_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
@@ -16,19 +19,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  const contentType = req.headers.get("content-type");
-  if (!contentType?.includes("multipart/form-data")) {
-    return NextResponse.json({ error: "Expected a multipart upload." }, { status: 415 });
-  }
+  const limited = enforceRateLimit(req, "import-assets", 20, 5 * 60_000);
+  if (limited) return limited;
 
-  const body = await req.arrayBuffer();
+  const result = await validateUpload(req, UPLOAD_RULES.asset);
+  if ("error" in result) return result.error;
 
   let upstream: Response;
   try {
     upstream = await fetch(`${API_URL}/assets/import`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": contentType },
-      body,
+      headers: { Authorization: `Bearer ${token}` },
+      body: result.formData,
       cache: "no-store",
     });
   } catch {
