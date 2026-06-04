@@ -233,7 +233,7 @@ export function InventoryWorkspace() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="min-w-0 space-y-6">
         {/* Config */}
         <Card className="space-y-4">
