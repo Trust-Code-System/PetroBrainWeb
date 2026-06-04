@@ -546,13 +546,29 @@ function InventoryResultView({ result }: { result: InventoryResult }) {
             <Meta label="GWP basis" value={rpt.gwp_basis} />
           </dl>
           {rpt.compliance_flags && rpt.compliance_flags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {rpt.compliance_flags.map((flag) => (
-                <Badge key={flag} tone="warn">
-                  {flag}
-                </Badge>
+            <ul className="space-y-1.5">
+              {rpt.compliance_flags.map((flag, i) => (
+                <li
+                  key={i}
+                  className="flex gap-2 rounded-md border border-warn/30 bg-warn/5 px-3 py-2 text-sm text-secondary"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-warn"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M12 9v4m0 3h.01M10.3 4.3 2.5 18a1.6 1.6 0 0 0 1.4 2.4h16.2a1.6 1.6 0 0 0 1.4-2.4L13.7 4.3a1.6 1.6 0 0 0-2.8 0Z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>{flag}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
           {rpt.audit_sha256 && (
             <div className="rounded-md bg-surface-2 px-3 py-2">
