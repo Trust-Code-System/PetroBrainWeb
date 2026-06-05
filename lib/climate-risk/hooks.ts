@@ -3,13 +3,16 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { swallowNotFound } from "@/lib/api/pb";
 import { fallbackClimateRiskAssets } from "@/lib/appFallbacks";
+import { assetLocationClimateRisk } from "@/lib/realDataBridge";
 import { climateRiskApi } from "./client";
 
 export function useClimateRiskAssets() {
   return useQuery({
     queryKey: ["climate-risk", "assets"],
-    queryFn: ({ signal }) =>
-      swallowNotFound(climateRiskApi.assets(signal)).then((data) => data ?? fallbackClimateRiskAssets()),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(climateRiskApi.assets(signal))) ??
+      (await assetLocationClimateRisk(signal)) ??
+      fallbackClimateRiskAssets(),
   });
 }
 

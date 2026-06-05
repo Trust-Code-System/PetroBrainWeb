@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { swallowNotFound } from "@/lib/api/pb";
 import { fallbackReportSchedules, fallbackReportSummary } from "@/lib/appFallbacks";
+import { inventoryReportSummary } from "@/lib/realDataBridge";
 import { reportsApi } from "./client";
 import type { CreateScheduleInput, ReportConfig } from "./types";
 
@@ -11,8 +12,10 @@ const SCHEDULES_KEY = ["reports", "schedules"] as const;
 export function useReportSummary(p: { from: string; to: string; assetId?: string }) {
   return useQuery({
     queryKey: ["reports", "summary", p],
-    queryFn: ({ signal }) =>
-      swallowNotFound(reportsApi.summary(p, signal)).then((data) => data ?? fallbackReportSummary),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(reportsApi.summary(p, signal))) ??
+      (await inventoryReportSummary(p, signal)) ??
+      fallbackReportSummary,
   });
 }
 

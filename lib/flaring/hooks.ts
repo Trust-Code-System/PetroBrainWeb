@@ -8,6 +8,12 @@ import {
   fallbackMethaneIntensity,
   fallbackZeroRoutineTracker,
 } from "@/lib/appFallbacks";
+import {
+  inventoryFlaringAssets,
+  inventoryGasOpportunity,
+  inventoryMethaneIntensity,
+  inventoryZeroRoutineTracker,
+} from "@/lib/realDataBridge";
 import { flaringApi } from "./client";
 
 /** React Query hooks for the flaring page. Server state only. */
@@ -23,31 +29,39 @@ export const flaringKeys = {
 export function useFlaringAssets(p: { assetId?: string; period?: string } = {}) {
   return useQuery({
     queryKey: flaringKeys.assets(p),
-    queryFn: ({ signal }) =>
-      swallowNotFound(flaringApi.assets(p, signal)).then((data) => data ?? fallbackFlaringAssets(p.assetId)),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(flaringApi.assets(p, signal))) ??
+      (await inventoryFlaringAssets(p, signal)) ??
+      fallbackFlaringAssets(p.assetId),
   });
 }
 
 export function useMethaneIntensity(p: { assetId?: string; period?: string } = {}) {
   return useQuery({
     queryKey: flaringKeys.methane(p),
-    queryFn: ({ signal }) =>
-      swallowNotFound(flaringApi.methaneIntensity(p, signal)).then((data) => data ?? fallbackMethaneIntensity),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(flaringApi.methaneIntensity(p, signal))) ??
+      (await inventoryMethaneIntensity(signal)) ??
+      fallbackMethaneIntensity,
   });
 }
 
 export function useZeroRoutineTracker(p: { assetId?: string } = {}) {
   return useQuery({
     queryKey: flaringKeys.tracker(p),
-    queryFn: ({ signal }) =>
-      swallowNotFound(flaringApi.zeroRoutineTracker(p, signal)).then((data) => data ?? fallbackZeroRoutineTracker),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(flaringApi.zeroRoutineTracker(p, signal))) ??
+      (await inventoryZeroRoutineTracker(signal)) ??
+      fallbackZeroRoutineTracker,
   });
 }
 
 export function useGasOpportunity(p: { assetId?: string; period?: string } = {}) {
   return useQuery({
     queryKey: flaringKeys.opportunity(p),
-    queryFn: ({ signal }) =>
-      swallowNotFound(flaringApi.opportunity(p, signal)).then((data) => data ?? fallbackGasOpportunity),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(flaringApi.opportunity(p, signal))) ??
+      (await inventoryGasOpportunity(signal)) ??
+      fallbackGasOpportunity,
   });
 }

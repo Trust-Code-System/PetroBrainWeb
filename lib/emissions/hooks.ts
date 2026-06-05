@@ -9,6 +9,11 @@ import {
   fallbackScopeSummary,
   fallbackSources,
 } from "@/lib/appFallbacks";
+import {
+  inventoryFlaringReconciliation,
+  inventoryScopeSummary,
+  inventorySources,
+} from "@/lib/realDataBridge";
 import { emissionsApi } from "./client";
 import type { SourceFilters } from "./types";
 
@@ -27,16 +32,20 @@ export const emissionsKeys = {
 export function useScopeSummary(p: { period?: string; assetId?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.scope(p),
-    queryFn: ({ signal }) =>
-      swallowNotFound(emissionsApi.scopeSummary(p, signal)).then((data) => data ?? fallbackScopeSummary),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(emissionsApi.scopeSummary(p, signal))) ??
+      (await inventoryScopeSummary(p, signal)) ??
+      fallbackScopeSummary,
   });
 }
 
 export function useSources(filters: SourceFilters) {
   return useQuery({
     queryKey: emissionsKeys.sources(filters),
-    queryFn: ({ signal }) =>
-      swallowNotFound(emissionsApi.sources(filters, signal)).then((data) => data ?? fallbackSources),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(emissionsApi.sources(filters, signal))) ??
+      (await inventorySources(filters, signal)) ??
+      fallbackSources,
   });
 }
 
@@ -60,10 +69,10 @@ export function useFinanced(p: { period?: string } = {}) {
 export function useFlaringReconciliation(p: { period?: string; assetId?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.reconciliation(p),
-    queryFn: ({ signal }) =>
-      swallowNotFound(emissionsApi.flaringReconciliation(p, signal)).then(
-        (data) => data ?? fallbackFlaringReconciliation(p.assetId),
-      ),
+    queryFn: async ({ signal }) =>
+      (await swallowNotFound(emissionsApi.flaringReconciliation(p, signal))) ??
+      (await inventoryFlaringReconciliation(p, signal)) ??
+      fallbackFlaringReconciliation(p.assetId),
   });
 }
 
