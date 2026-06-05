@@ -26,11 +26,24 @@ function summarize(e: unknown) {
 export async function GET() {
   const out: Record<string, unknown> = {
     env: {
-      NEON_AUTH_BASE_URL: Boolean(process.env.NEON_AUTH_BASE_URL),
+      // Public auth endpoint (not a secret) — exposed so we know which Neon project to check.
+      NEON_AUTH_BASE_URL: process.env.NEON_AUTH_BASE_URL ?? null,
       NEON_AUTH_COOKIE_SECRET: Boolean(process.env.NEON_AUTH_COOKIE_SECRET),
       PETROBRAIN_API_URL: process.env.PETROBRAIN_API_URL ?? null,
     },
   };
+
+  // Probe the Neon Auth JWKS from the server — this is what a backend must read to verify
+  // tokens. A DB error here means the Neon Auth project's database is broken.
+  const base = (process.env.NEON_AUTH_BASE_URL ?? "").replace(/\/$/, "");
+  if (base) {
+    try {
+      const r = await fetch(`${base}/api/auth/jwks`, { cache: "no-store" });
+      out.jwks = { status: r.status, body: (await r.text()).slice(0, 240) };
+    } catch (e) {
+      out.jwks = { threw: summarize(e) };
+    }
+  }
 
   // 1) Session present?
   try {
