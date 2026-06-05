@@ -40,15 +40,48 @@ export async function GET() {
     out.session = { ok: false, threw: summarize(e) };
   }
 
-  // 2) Can we mint a backend token?
+  // 2) Can we mint a backend token? Decode its header+payload (NOT the signature) so the
+  // backend team can see the issuer / audience / alg they must verify against. Redacts email.
   try {
     const { data, error } = await auth.token();
+    const tok = (data as { token?: string } | null)?.token ?? null;
+    let header: unknown = null;
+    let claims: Record<string, unknown> | null = null;
+    if (tok) {
+      const [h, p] = tok.split(".");
+      const dec = (s: string) =>
+        JSON.parse(Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
+      try {
+        header = dec(h);
+        const c = dec(p) as Record<string, unknown>;
+        if (typeof c.email === "string") c.email = "[redacted]";
+        claims = c;
+      } catch {
+        /* ignore decode errors */
+      }
+    }
     out.token = {
-      ok: Boolean((data as { token?: string } | null)?.token),
-      // shape only — which keys came back, never the value
+      ok: Boolean(tok),
       dataKeys: data && typeof data === "object" ? Object.keys(data) : null,
+      header,
+      claims,
       error: summarize(error),
     };
+
+    // 3) Replay the token against the backend exactly as the proxy would — to capture the
+    // backend's own response (status + body) on a route that EXISTS (/assets).
+    if (tok) {
+      const api = (process.env.PETROBRAIN_API_URL ?? "").replace(/\/$/, "");
+      try {
+        const r = await fetch(`${api}/assets`, {
+          headers: { Authorization: `Bearer ${tok}`, Accept: "application/json" },
+          cache: "no-store",
+        });
+        out.backendAssets = { status: r.status, body: (await r.text()).slice(0, 400) };
+      } catch (e) {
+        out.backendAssets = { threw: summarize(e) };
+      }
+    }
   } catch (e) {
     out.token = { ok: false, threw: summarize(e) };
   }
