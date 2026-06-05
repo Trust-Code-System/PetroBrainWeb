@@ -47,8 +47,8 @@ export async function GET() {
     const tok = (data as { token?: string } | null)?.token ?? null;
     let header: unknown = null;
     let claims: Record<string, unknown> | null = null;
-    if (tok) {
-      const [h, p] = tok.split(".");
+    const [h, p] = tok ? tok.split(".") : [];
+    if (h && p) {
       const dec = (s: string) =>
         JSON.parse(Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString());
       try {
