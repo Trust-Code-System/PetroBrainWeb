@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { emissionsApi } from "./client";
 import type { SourceFilters } from "./types";
 
@@ -19,21 +20,21 @@ export const emissionsKeys = {
 export function useScopeSummary(p: { period?: string; assetId?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.scope(p),
-    queryFn: ({ signal }) => emissionsApi.scopeSummary(p, signal),
+    queryFn: ({ signal }) => swallowNotFound(emissionsApi.scopeSummary(p, signal)),
   });
 }
 
 export function useSources(filters: SourceFilters) {
   return useQuery({
     queryKey: emissionsKeys.sources(filters),
-    queryFn: ({ signal }) => emissionsApi.sources(filters, signal),
+    queryFn: ({ signal }) => swallowNotFound(emissionsApi.sources(filters, signal)),
   });
 }
 
 export function useAssets() {
   return useQuery({
     queryKey: emissionsKeys.assets,
-    queryFn: ({ signal }) => emissionsApi.assets(signal),
+    queryFn: ({ signal }) => swallowNotFound(emissionsApi.assets(signal)),
     staleTime: 5 * 60_000,
   });
 }
@@ -41,14 +42,14 @@ export function useAssets() {
 export function useFinanced(p: { period?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.financed(p),
-    queryFn: ({ signal }) => emissionsApi.financed(p, signal),
+    queryFn: ({ signal }) => swallowNotFound(emissionsApi.financed(p, signal)),
   });
 }
 
 export function useFlaringReconciliation(p: { period?: string; assetId?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.reconciliation(p),
-    queryFn: ({ signal }) => emissionsApi.flaringReconciliation(p, signal),
+    queryFn: ({ signal }) => swallowNotFound(emissionsApi.flaringReconciliation(p, signal)),
   });
 }
 

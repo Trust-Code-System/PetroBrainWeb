@@ -35,3 +35,9 @@ yarn-error.log*
 
 # contentlayer (generated)
 .contentlayer
+
+# playwright (E2E artifacts)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

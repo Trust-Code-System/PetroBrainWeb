@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, configDefaults } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
 /**
@@ -17,5 +17,9 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL(".", import.meta.url)),
     },
+  },
+  // The Playwright E2E suite (e2e/**) runs under Playwright, not Vitest — keep them apart.
+  test: {
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
 });

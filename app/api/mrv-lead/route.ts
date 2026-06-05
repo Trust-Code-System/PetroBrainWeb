@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { deliverLead, maskEmail } from "@/lib/leads";
 
 /**
- * MRV readiness lead capture — STUB.
- * Captures the email (and the computed band/score, if sent) needed to unlock the full
- * gap report, validates, logs server-side, and returns success.
+ * MRV readiness lead capture.
+ * Captures the email (and the computed band/score, if sent) needed to unlock the full gap
+ * report, validates + rate-limits server-side, then forwards to the CRM webhook if
+ * configured (else logs a PII-redacted summary).
  *
- * TODO(crm): wire to the CRM / email path (see /api/demo for the same pattern). Send
- * the full gap report by email and create a lead record. Never trust the client —
- * validate here.
+ * TODO(crm): also email the full gap report. CRM forwarding is wired via CRM_WEBHOOK_URL.
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,6 +20,10 @@ function asString(v: unknown): string {
 }
 
 export async function POST(req: Request) {
+  // Per-IP rate limit: 5 submissions / 10 min.
+  const limited = enforceRateLimit(req, "mrv-lead", 5, 10 * 60_000);
+  if (limited) return limited;
+
   let data: Payload;
   try {
     data = (await req.json()) as Payload;
@@ -47,8 +52,13 @@ export async function POST(req: Request) {
     receivedAt: new Date().toISOString(),
   };
 
-  // TODO(crm): replace with real CRM/email wiring; email the full gap report.
-  console.info("[mrv-lead]", lead);
+  // Forward to CRM if configured; logs a PII-redacted summary either way.
+  await deliverLead("mrv-lead", lead, {
+    email: maskEmail(email),
+    band: lead.band,
+    percent: lead.percent,
+    receivedAt: lead.receivedAt,
+  });
 
   return NextResponse.json({ ok: true });
 }

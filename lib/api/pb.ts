@@ -29,6 +29,21 @@ export async function pbGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   return (await res.json()) as T;
 }
 
+/**
+ * Wraps a data-fetching promise so that a 404 response (endpoint not yet implemented on the
+ * backend) resolves to undefined instead of rejecting. React Query then sees data=undefined /
+ * isError=false, and the component shows its "no data" empty state rather than "couldn't load".
+ * Non-404 failures still propagate so real errors remain visible.
+ */
+export function swallowNotFound<T>(p: Promise<T>): Promise<T | undefined> {
+  return p.catch((e: unknown) => {
+    if (e != null && typeof e === "object" && "status" in e && (e as { status: unknown }).status === 404) {
+      return undefined;
+    }
+    throw e;
+  });
+}
+
 async function pbSend<T>(method: "POST" | "PATCH", path: string, body: unknown): Promise<T> {
   const res = await fetch(`${PB}/${path}`, {
     method,

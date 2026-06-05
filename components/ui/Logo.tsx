@@ -6,13 +6,17 @@ import { cn } from "@/lib/cn";
 
 /**
  * Logo — PetroBrain wordmark with the glossy 3D oil-drop mark (shared with the
- * PetroBrain product app). Links home unless `asLink={false}`.
+ * PetroBrain product app). Links home unless `href` is overridden or `asLink={false}`.
  */
 export function Logo({
   asLink = true,
+  href = "/",
+  ariaLabel = "PetroBrain — home",
   className,
 }: {
   asLink?: boolean;
+  href?: string;
+  ariaLabel?: string;
   className?: string;
 }) {
   const content = (
@@ -26,7 +30,7 @@ export function Logo({
 
   if (!asLink) return content;
   return (
-    <Link href="/" aria-label="PetroBrain — home" className="rounded-sm">
+    <Link href={href} aria-label={ariaLabel} className="rounded-sm">
       {content}
     </Link>
   );

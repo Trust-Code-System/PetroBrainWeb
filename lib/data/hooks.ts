@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { dataApi } from "./client";
 import type { BatchOperation, DataDataset } from "./types";
 
 export function useDataQuality(dataset: DataDataset) {
   return useQuery({
     queryKey: ["data", "quality", dataset],
-    queryFn: ({ signal }) => dataApi.quality(dataset, signal),
+    queryFn: ({ signal }) => swallowNotFound(dataApi.quality(dataset, signal)),
   });
 }
 
@@ -27,7 +28,7 @@ export function useRunBatch() {
 export function useBatchJob(id: string | null) {
   return useQuery({
     queryKey: ["data", "batch", id ?? ""],
-    queryFn: ({ signal }) => dataApi.batchJob(id as string, signal),
+    queryFn: ({ signal }) => swallowNotFound(dataApi.batchJob(id as string, signal)),
     enabled: Boolean(id),
     refetchInterval: (query) => {
       const s = query.state.data?.status;

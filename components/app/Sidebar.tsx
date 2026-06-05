@@ -55,7 +55,7 @@ export function Sidebar() {
               <LogoMark className="h-7 w-7" />
             </Link>
           ) : (
-            <Logo />
+            <Logo href="/app" ariaLabel="PetroBrain — dashboard" />
           )}
         </div>
 
@@ -101,7 +101,7 @@ export function Sidebar() {
           )}
         >
           <div className="flex h-16 items-center justify-between border-b border-border-subtle px-4">
-            <Logo />
+            <Logo href="/app" ariaLabel="PetroBrain — dashboard" />
             <button
               type="button"
               onClick={() => setMobileOpen(false)}

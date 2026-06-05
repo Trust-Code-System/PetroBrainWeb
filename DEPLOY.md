@@ -37,7 +37,8 @@ are exposed to the browser (no secrets); everything else is server-only.
 | Var | Purpose |
 |-----|---------|
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` / `NEXT_PUBLIC_PLAUSIBLE_SRC` | Privacy-respecting analytics (blank = disabled). |
-| `CRM_WEBHOOK_URL` | Demo-form lead webhook (server-only). |
+| `NEXT_PUBLIC_ERROR_REPORT_URL` | Client crash-report collector (Sentry tunnel / Datadog / own endpoint). Blank = log-only. See `lib/observability.ts`. |
+| `CRM_WEBHOOK_URL` | Demo + MRV lead webhook (server-only). Blank = leads logged (PII-redacted) only. |
 | `NEXT_PUBLIC_CALCOM_URL` | Cal.com booking embed on `/demo`. |
 | `NEXT_PUBLIC_DEMOS_ENABLED` | `true` enables the marketing interactive demos. Default off. |
 | `NEXT_PUBLIC_APP_URL` | Legacy; unused by nav. Leave blank. |
@@ -128,9 +129,13 @@ data-readiness).
 npm ci
 npm run lint        # ESLint — 0 warnings/errors
 npm run typecheck   # contentlayer build + tsc --noEmit
-npm test            # vitest — 81 tests
+npm test            # vitest — 82 tests
 npm run build       # next build — all routes compile
+npm run test:e2e    # Playwright smoke + axe a11y (build first; needs Chromium)
 ```
+
+CI runs all of the above on every push/PR to `main` (`.github/workflows/ci.yml` — a `verify`
+job + an `e2e` job). Make both required checks in branch protection.
 
 ---
 
@@ -173,7 +178,46 @@ confirm ≥90 perf / 100 a11y / SEO.
 ---
 
 ## 6. Notes
-- Session is an httpOnly `pb_session` cookie (set by `/api/auth/login`); middleware gates
-  `/app/*`. Ensure HTTPS in production so the `secure` cookie flag applies.
+- Session cookies are managed by **Neon Auth (Better Auth)** via `/api/auth/[...path]`;
+  `proxy.ts` gates `/app/*`. Ensure HTTPS in production so the secure cookie flag applies.
 - In-memory caches (public-data TTL) are per-instance; fine for serverless. For shared
   caching, implement the `CacheStore` over Redis (seam already in `lib/public-data/cache.ts`).
+
+---
+
+## 7. Production hardening (security & reliability)
+
+Built into this repo — verify the env-dependent bits are configured for prod.
+
+### Security
+- **HTTP security headers** (`next.config.mjs` → `headers()`): CSP (allowlists MapTiler/CARTO/
+  openmaptiles/Plausible/Cal.com + operator-set map & hazard-tile origins via env), `X-Frame-
+  Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`,
+  HSTS. **If you add a new external script/style/connect origin, extend the CSP** or it's blocked.
+- **Rate limiting** (`lib/rateLimit.ts`, per-IP, best-effort in-memory): lead forms (5/10min),
+  uploads (10–20/5min), copilot (30/min), and the auth credential paths (10/5min).
+  ⚠️ Per-instance only (resets on cold start, not shared across instances) — for distributed
+  enforcement add a **Vercel WAF rule** or Upstash. This also closes the Better Auth limiter-
+  bypass advisory (GHSA-p6v2-xcpg-h6xw) at the edge.
+- **Upload validation** (`lib/uploads.ts`): per-route size caps (5–25 MB) + extension allowlist,
+  enforced before buffering. The backend remains the authority for deep content/MIME inspection
+  + malware scanning — **confirm it does** (open item).
+- **PII hygiene:** lead routes forward to `CRM_WEBHOOK_URL` and log only a masked email + non-
+  identifying fields — no raw PII in logs.
+- **Known accepted advisories:** the remaining `npm audit` findings are all dev/test-only
+  (vitest/esbuild/vite) or require breaking major bumps of the beta auth packages. The prod
+  build chain is already on patched versions. Revisit in a dedicated, tested upgrade.
+
+### Reliability & observability
+- **Health endpoint:** `GET /api/health` → app liveness + a 3s backend reachability probe.
+- **Keep-warm (Render cold-start fix):** Vercel Hobby cron can't run sub-daily, so point an
+  **external uptime monitor** (UptimeRobot, cron-job.org) at `/api/health` every ~10 min to
+  keep the backend awake. The proxy/upload/copilot routes also set `maxDuration = 60` and the
+  proxy retries idempotent (GET/HEAD) calls once to ride out a cold start.
+- **Error boundaries:** `app/global-error.tsx` (root) + `app/app/error.tsx` (`/app` segment)
+  degrade gracefully and report via `lib/observability.ts` — set `NEXT_PUBLIC_ERROR_REPORT_URL`
+  to forward client crashes to a collector (else log-only).
+
+> **Out of this repo (backend/infra):** DB indexes/pooling, tested backup-restore + RTO/RPO,
+> moving the backend off Render free tier, and a security audit of the Python backend (the tier
+> that actually holds customer data). Track these before scaling.

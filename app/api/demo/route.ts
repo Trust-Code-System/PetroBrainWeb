@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/rateLimit";
+import { deliverLead, maskEmail } from "@/lib/leads";
 
 /**
- * Demo-request intake — STUB.
- * Validates the payload and (for now) just logs it server-side, returning success.
+ * Demo-request intake.
+ * Validates the payload server-side (never trust the client), rate-limits per IP, then
+ * forwards the lead to the CRM webhook if configured (else logs a PII-redacted summary).
  *
- * TODO(crm): wire this to the real CRM / notification path. Suggested:
- *   - POST the lead to the CRM via process.env.CRM_WEBHOOK_URL (server-only secret),
- *   - send an internal notification email to the demo inbox,
- *   - persist a record for audit.
- * Keep validation here as the server-side source of truth; never trust the client.
+ * TODO(crm): also send an internal notification email to the demo inbox + persist an audit
+ * record. CRM forwarding is wired via CRM_WEBHOOK_URL in lib/leads.ts.
  */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,6 +21,10 @@ function asString(v: unknown): string {
 }
 
 export async function POST(req: Request) {
+  // Per-IP rate limit: 5 submissions / 10 min. Cheap protection against lead-form spam.
+  const limited = enforceRateLimit(req, "demo", 5, 10 * 60_000);
+  if (limited) return limited;
+
   let data: Payload;
   try {
     data = (await req.json()) as Payload;
@@ -53,8 +57,13 @@ export async function POST(req: Request) {
     receivedAt: new Date().toISOString(),
   };
 
-  // TODO(crm): replace this log with the real CRM/email wiring described above.
-  console.info("[demo-request]", lead);
+  // Forward to CRM if configured; logs a PII-redacted summary either way.
+  await deliverLead("demo-request", lead, {
+    email: maskEmail(lead.email),
+    segment: lead.segment,
+    country: lead.country,
+    receivedAt: lead.receivedAt,
+  });
 
   return NextResponse.json({ ok: true });
 }

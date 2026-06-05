@@ -12,8 +12,34 @@ import { getBackendAccessToken } from "@/lib/auth/server";
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// The backend (Render) can cold-start ~50s after idle; give the function room to wait it out.
+export const maxDuration = 60;
 
 const API_URL = (process.env.PETROBRAIN_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+
+/**
+ * Fetch with one retry for cold-start hiccups — a sleeping backend can drop the first
+ * connection or 502/503 while waking. Only retried for safe (idempotent) methods so we never
+ * risk a double write.
+ */
+async function fetchWithColdStartRetry(
+  target: string,
+  init: RequestInit,
+  idempotent: boolean,
+): Promise<Response> {
+  try {
+    const res = await fetch(target, init);
+    if (idempotent && (res.status === 502 || res.status === 503)) {
+      await new Promise((r) => setTimeout(r, 1500));
+      return await fetch(target, init);
+    }
+    return res;
+  } catch (err) {
+    if (!idempotent) throw err;
+    await new Promise((r) => setTimeout(r, 1500));
+    return await fetch(target, init);
+  }
+}
 
 async function forward(req: NextRequest, path: string[]): Promise<Response> {
   const token = await getBackendAccessToken();
@@ -33,9 +59,14 @@ async function forward(req: NextRequest, path: string[]): Promise<Response> {
     headers["Content-Type"] = req.headers.get("content-type") ?? "application/json";
   }
 
+  const idempotent = method === "GET" || method === "HEAD";
   let upstream: Response;
   try {
-    upstream = await fetch(target, { method, headers, body, cache: "no-store" });
+    upstream = await fetchWithColdStartRetry(
+      target,
+      { method, headers, body, cache: "no-store" },
+      idempotent,
+    );
   } catch {
     return NextResponse.json({ error: "Couldn’t reach the backend service." }, { status: 502 });
   }

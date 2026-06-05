@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { intelligenceApi } from "./client";
 import { useOilPrices, useOpecProduction } from "@/lib/public-data/hooks";
 import type { MarketView } from "./types";
@@ -8,7 +9,7 @@ import type { MarketView } from "./types";
 export function useCostIntelligence(p: { assetId?: string } = {}) {
   return useQuery({
     queryKey: ["intelligence", "costs", p],
-    queryFn: ({ signal }) => intelligenceApi.costs(p, signal),
+    queryFn: ({ signal }) => swallowNotFound(intelligenceApi.costs(p, signal)),
   });
 }
 

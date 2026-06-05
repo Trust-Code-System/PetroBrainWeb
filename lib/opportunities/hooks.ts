@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { opportunitiesApi } from "./client";
 import type { RoundFilters } from "./types";
 
@@ -18,14 +19,14 @@ export const opportunityKeys = {
 export function useRounds(filters: RoundFilters) {
   return useQuery({
     queryKey: opportunityKeys.list(filters),
-    queryFn: ({ signal }) => opportunitiesApi.list(filters, signal),
+    queryFn: ({ signal }) => swallowNotFound(opportunitiesApi.list(filters, signal)),
   });
 }
 
 export function useWatchedRounds(enabled = true) {
   return useQuery({
     queryKey: opportunityKeys.watched(),
-    queryFn: ({ signal }) => opportunitiesApi.watched(signal),
+    queryFn: ({ signal }) => swallowNotFound(opportunitiesApi.watched(signal)),
     enabled,
   });
 }
@@ -82,7 +83,7 @@ export function useRoundUpdates(id: string | null) {
 export function useUnreadUpdates() {
   return useQuery({
     queryKey: opportunityKeys.unread(),
-    queryFn: ({ signal }) => opportunitiesApi.unread(signal),
+    queryFn: ({ signal }) => swallowNotFound(opportunitiesApi.unread(signal)),
     refetchInterval: 60_000,
   });
 }

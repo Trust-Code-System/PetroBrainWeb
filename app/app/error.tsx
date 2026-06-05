@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { reportError } from "@/lib/observability";
 
 /**
  * Error boundary for the /app segment. Keeps a single failing page/component from
@@ -11,8 +12,7 @@ import { Button } from "@/components/ui/Button";
  */
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    // Surface for debugging; real telemetry can hook in here later.
-    console.error("App segment error:", error);
+    reportError(error, { boundary: "app-segment", digest: error.digest });
   }, [error]);
 
   return (

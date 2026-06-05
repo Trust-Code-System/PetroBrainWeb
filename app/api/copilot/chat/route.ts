@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendAccessToken } from "@/lib/auth/server";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import {
   CHAT_URL,
   buildChatRequest,
@@ -18,12 +19,18 @@ import type { ChatMessage, PageContext } from "@/lib/copilot/types";
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// The backend (Render) can cold-start ~50s after idle; give the function room to wait it out.
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const token = await getBackendAccessToken();
   if (!token) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+
+  // Per-IP cap on copilot turns — each one fans out to the LLM backend, so this guards cost.
+  const limited = enforceRateLimit(req, "copilot", 30, 60_000);
+  if (limited) return limited;
 
   let body: { messages?: Pick<ChatMessage, "role" | "content">[]; pageContext?: PageContext };
   try {

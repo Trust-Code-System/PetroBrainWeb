@@ -8,7 +8,7 @@ import type { MarketView } from "@/lib/intelligence/types";
 
 /**
  * MarketPanel — Brent / WTI / Bonny Light, the Brent–WTI differential, and OPEC production
- * (public data). Each tile is stage-badged: "Live now · public" when we have it, or
+ * (public data). Each tile is stage-badged: "Live" when we have it, or
  * "Connect your feed" when it needs a feed (Bonny Light has no free public spot source).
  * Never a fabricated price.
  */

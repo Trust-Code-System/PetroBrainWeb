@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { notificationsApi } from "./client";
 
 const KEY = ["notifications"] as const;
@@ -8,7 +9,7 @@ const KEY = ["notifications"] as const;
 export function useNotifications() {
   return useQuery({
     queryKey: KEY,
-    queryFn: ({ signal }) => notificationsApi.list(signal),
+    queryFn: ({ signal }) => swallowNotFound(notificationsApi.list(signal)),
     // Light polling so deadlines / copilot-completed tasks surface without a refresh.
     refetchInterval: 60_000,
     staleTime: 30_000,
