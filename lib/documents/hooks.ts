@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { documentsApi } from "./client";
 import type { DocFilters, DocumentType } from "./types";
 
@@ -12,7 +13,7 @@ export const documentKeys = {
 export function useDocuments(filters: DocFilters) {
   return useQuery({
     queryKey: documentKeys.list(filters),
-    queryFn: ({ signal }) => documentsApi.list(filters, signal),
+    queryFn: ({ signal }) => swallowNotFound(documentsApi.list(filters, signal)),
     // Poll while anything is still ingesting so status updates live.
     refetchInterval: (query) =>
       query.state.data?.items.some((d) => d.status === "processing") ? 4000 : false,

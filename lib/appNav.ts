@@ -47,7 +47,6 @@ export const appNav: AppNavGroup[] = [
   {
     heading: "Intelligence",
     items: [
-      { label: "Cross-domain", href: "/app/intelligence", icon: "market" },
       { label: "Market", href: "/app/intelligence/market", icon: "market" },
       { label: "Asset", href: "/app/intelligence/asset", icon: "asset" },
       { label: "Cost Intelligence", href: "/app/intelligence/cost", icon: "cost" },

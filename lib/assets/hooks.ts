@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { assetsApi } from "./client";
 import type { AssetFilters, CreateAssetInput, UpdateAssetInput } from "./types";
 
@@ -15,7 +16,7 @@ export const assetKeys = {
 export function useAssetList(filters: AssetFilters) {
   return useQuery({
     queryKey: assetKeys.list(filters),
-    queryFn: ({ signal }) => assetsApi.list(filters, signal),
+    queryFn: ({ signal }) => swallowNotFound(assetsApi.list(filters, signal)),
   });
 }
 

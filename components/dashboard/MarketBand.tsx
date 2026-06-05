@@ -65,7 +65,7 @@ export function MarketBand() {
           <h2 id="market-heading" className="text-lg font-semibold tracking-tight text-primary">
             Market
           </h2>
-          <StageBadge stage="live" note="public data" />
+          <StageBadge stage="live" />
         </div>
         <p className="text-xs text-faint">Public sources · EIA · Baker Hughes · OPEC</p>
       </div>

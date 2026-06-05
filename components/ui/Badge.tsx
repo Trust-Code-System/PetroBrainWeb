@@ -46,7 +46,7 @@ export function Badge({ children, tone = "neutral", dot = false, className }: Ba
 /**
  * StageBadge — the MANDATORY, site-wide honesty label for every intelligence
  * capability. Renders exactly one of three canonical stages with a fixed color:
- *   - "live"     → "Live now"        (green)
+ *   - "live"     → "Live"            (green)
  *   - "expanding"→ "Expanding"       (amber)
  *   - "roadmap"  → "On the roadmap"  (grey)
  *
@@ -60,7 +60,7 @@ export function Badge({ children, tone = "neutral", dot = false, className }: Ba
 export type Stage = "live" | "expanding" | "roadmap";
 
 const STAGE: Record<Stage, { label: string; tone: Tone }> = {
-  live: { label: "Live now", tone: "safe" },
+  live: { label: "Live", tone: "safe" },
   expanding: { label: "Expanding", tone: "warn" },
   roadmap: { label: "On the roadmap", tone: "neutral" },
 };

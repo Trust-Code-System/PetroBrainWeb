@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { calcApi } from "./client";
 import type { CalcInputs } from "./types";
 
@@ -8,7 +9,7 @@ import type { CalcInputs } from "./types";
 export function useCalcCatalog() {
   return useQuery({
     queryKey: ["calc", "catalog"],
-    queryFn: ({ signal }) => calcApi.catalog(signal),
+    queryFn: ({ signal }) => swallowNotFound(calcApi.catalog(signal)),
     staleTime: 5 * 60 * 1000,
   });
 }

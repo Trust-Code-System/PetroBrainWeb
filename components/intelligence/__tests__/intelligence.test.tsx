@@ -40,7 +40,7 @@ describe("DataAvailabilityBox", () => {
     expect(screen.getByText(/never invents a number/i)).toBeInTheDocument();
     // Bonny Light + your costs need connecting; benchmarks are Expanding.
     expect(screen.getAllByText("Connect your feed").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/Live now/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Live").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Expanding")).toBeInTheDocument();
     expect(screen.getByText(/Connect Argus \/ Platts/i)).toBeInTheDocument();
   });

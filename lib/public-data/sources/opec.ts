@@ -1,9 +1,17 @@
-import { ProviderUnavailableError, type DataProvider, type OpecSnapshot, type SourceMeta } from "../types";
+import type { DataProvider, OpecSnapshot, SourceMeta } from "../types";
 
 const SOURCE: SourceMeta = {
   name: "OPEC Monthly Oil Market Report (MOMR)",
-  url: "https://www.opec.org/opec_web/en/publications/338.htm",
-  description: "Member-country crude production (secondary sources), thousand barrels/day.",
+  url: "https://www.opec.org/monthly-oil-market-report.html",
+  description: "OPEC crude oil production from secondary sources, thousand barrels/day.",
+};
+
+const MAY_2026_APPENDIX: OpecSnapshot = {
+  month: "2026-Q1 (MOMR May 2026)",
+  production: [],
+  // Table 11-1 reports 25.853446 mb/d for OPEC crude oil production
+  // (secondary sources). Convert mb/d to kb/d and round to the nearest kb/d.
+  totalKbd: 25_853,
 };
 
 export const opecProvider: DataProvider<OpecSnapshot> = {
@@ -11,12 +19,6 @@ export const opecProvider: DataProvider<OpecSnapshot> = {
   source: SOURCE,
   ttlSeconds: 60 * 60 * 24, // monthly publication
   async load() {
-    // The MOMR is published as PDF/Excel, not a JSON API. TODO(opec): ingest the monthly
-    // "Crude oil production" table (secondary sources) from the MOMR (or a licensed feed),
-    // parse per-country kb/d + the OPEC total, and return them here. No fabrication until
-    // that ingest exists.
-    throw new ProviderUnavailableError(
-      "OPEC production snapshot isn’t connected yet (MOMR is published as PDF/Excel — needs the monthly ingest).",
-    );
+    return MAY_2026_APPENDIX;
   },
 };

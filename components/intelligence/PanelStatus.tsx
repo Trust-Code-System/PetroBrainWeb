@@ -8,7 +8,7 @@ import { Badge, StageBadge } from "@/components/ui/Badge";
 export type PanelStatusKind = "live" | "connect" | "expanding";
 
 export function PanelStatus({ kind }: { kind: PanelStatusKind }) {
-  if (kind === "live") return <StageBadge stage="live" note="public" />;
+  if (kind === "live") return <StageBadge stage="live" />;
   if (kind === "expanding") return <StageBadge stage="expanding" />;
   return (
     <Badge tone="neutral" dot>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { accountApi } from "./client";
 import type { OrgSettings, ProfileData, UserSettings } from "./types";
 
 export function useProfile() {
-  return useQuery({ queryKey: ["account", "profile"], queryFn: ({ signal }) => accountApi.profile(signal) });
+  return useQuery({ queryKey: ["account", "profile"], queryFn: ({ signal }) => swallowNotFound(accountApi.profile(signal)) });
 }
 export function useUpdateProfile() {
   const qc = useQueryClient();
@@ -23,7 +24,7 @@ export function useUploadAvatar() {
 }
 
 export function useOrg() {
-  return useQuery({ queryKey: ["account", "org"], queryFn: ({ signal }) => accountApi.org(signal) });
+  return useQuery({ queryKey: ["account", "org"], queryFn: ({ signal }) => swallowNotFound(accountApi.org(signal)) });
 }
 export function useUpdateOrg() {
   const qc = useQueryClient();
@@ -34,7 +35,7 @@ export function useUpdateOrg() {
 }
 
 export function useSettings() {
-  return useQuery({ queryKey: ["account", "settings"], queryFn: ({ signal }) => accountApi.settings(signal) });
+  return useQuery({ queryKey: ["account", "settings"], queryFn: ({ signal }) => swallowNotFound(accountApi.settings(signal)) });
 }
 export function useUpdateSettings() {
   const qc = useQueryClient();
@@ -45,11 +46,11 @@ export function useUpdateSettings() {
 }
 
 export function useTeam() {
-  return useQuery({ queryKey: ["account", "team"], queryFn: ({ signal }) => accountApi.team(signal) });
+  return useQuery({ queryKey: ["account", "team"], queryFn: ({ signal }) => swallowNotFound(accountApi.team(signal)) });
 }
 
 export function useMemories() {
-  return useQuery({ queryKey: ["account", "memory"], queryFn: ({ signal }) => accountApi.memories(signal) });
+  return useQuery({ queryKey: ["account", "memory"], queryFn: ({ signal }) => swallowNotFound(accountApi.memories(signal)) });
 }
 export function useUpdateMemory() {
   const qc = useQueryClient();

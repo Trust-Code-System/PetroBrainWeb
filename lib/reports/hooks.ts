@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { swallowNotFound } from "@/lib/api/pb";
 import { reportsApi } from "./client";
 import type { CreateScheduleInput, ReportConfig } from "./types";
 
@@ -9,7 +10,7 @@ const SCHEDULES_KEY = ["reports", "schedules"] as const;
 export function useReportSummary(p: { from: string; to: string; assetId?: string }) {
   return useQuery({
     queryKey: ["reports", "summary", p],
-    queryFn: ({ signal }) => reportsApi.summary(p, signal),
+    queryFn: ({ signal }) => swallowNotFound(reportsApi.summary(p, signal)),
   });
 }
 
@@ -19,7 +20,7 @@ export function useGenerateReport() {
 }
 
 export function useReportSchedules() {
-  return useQuery({ queryKey: SCHEDULES_KEY, queryFn: ({ signal }) => reportsApi.schedules(signal) });
+  return useQuery({ queryKey: SCHEDULES_KEY, queryFn: ({ signal }) => swallowNotFound(reportsApi.schedules(signal)) });
 }
 
 export function useCreateSchedule() {
