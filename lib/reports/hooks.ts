@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { swallowNotFound } from "@/lib/api/pb";
+import { fallbackReportSchedules, fallbackReportSummary } from "@/lib/appFallbacks";
 import { reportsApi } from "./client";
 import type { CreateScheduleInput, ReportConfig } from "./types";
 
@@ -10,7 +11,8 @@ const SCHEDULES_KEY = ["reports", "schedules"] as const;
 export function useReportSummary(p: { from: string; to: string; assetId?: string }) {
   return useQuery({
     queryKey: ["reports", "summary", p],
-    queryFn: ({ signal }) => swallowNotFound(reportsApi.summary(p, signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(reportsApi.summary(p, signal)).then((data) => data ?? fallbackReportSummary),
   });
 }
 
@@ -20,7 +22,11 @@ export function useGenerateReport() {
 }
 
 export function useReportSchedules() {
-  return useQuery({ queryKey: SCHEDULES_KEY, queryFn: ({ signal }) => swallowNotFound(reportsApi.schedules(signal)) });
+  return useQuery({
+    queryKey: SCHEDULES_KEY,
+    queryFn: ({ signal }) =>
+      swallowNotFound(reportsApi.schedules(signal)).then((data) => data ?? fallbackReportSchedules),
+  });
 }
 
 export function useCreateSchedule() {

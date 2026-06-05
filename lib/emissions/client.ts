@@ -58,6 +58,11 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
+interface AssetNode {
+  id: string;
+  name: string;
+}
+
 export const emissionsApi = {
   scopeSummary: (p: { period?: string; assetId?: string }, signal?: AbortSignal) =>
     getJson<ScopeSummary>(`emissions/scope-summary${qs(p)}`, signal),
@@ -76,7 +81,12 @@ export const emissionsApi = {
     if (!res.ok) throw new EmissionsApiError(res.status, `Request failed (HTTP ${res.status}).`);
   },
 
-  assets: (signal?: AbortSignal) => getJson<{ items: AssetRef[] }>(`assets`, signal),
+  assets: async (signal?: AbortSignal) => {
+    const res = await getJson<{ items?: AssetRef[]; assets?: AssetNode[] }>(`assets`, signal);
+    return {
+      items: res.items ?? (res.assets ?? []).map((a) => ({ id: a.id, name: a.name })),
+    };
+  },
 
   financed: (p: { period?: string }, signal?: AbortSignal) =>
     getJson<FinancedSummary>(`emissions/financed${qs(p)}`, signal),

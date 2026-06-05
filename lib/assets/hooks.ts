@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { swallowNotFound } from "@/lib/api/pb";
+import { fallbackAssetList } from "@/lib/appFallbacks";
 import { assetsApi } from "./client";
 import type { AssetFilters, CreateAssetInput, UpdateAssetInput } from "./types";
 
@@ -16,7 +17,8 @@ export const assetKeys = {
 export function useAssetList(filters: AssetFilters) {
   return useQuery({
     queryKey: assetKeys.list(filters),
-    queryFn: ({ signal }) => swallowNotFound(assetsApi.list(filters, signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(assetsApi.list(filters, signal)).then((data) => data ?? fallbackAssetList),
   });
 }
 

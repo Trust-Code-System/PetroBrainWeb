@@ -2,6 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { swallowNotFound } from "@/lib/api/pb";
+import {
+  fallbackAssetRefs,
+  fallbackFinanced,
+  fallbackFlaringReconciliation,
+  fallbackScopeSummary,
+  fallbackSources,
+} from "@/lib/appFallbacks";
 import { emissionsApi } from "./client";
 import type { SourceFilters } from "./types";
 
@@ -20,21 +27,24 @@ export const emissionsKeys = {
 export function useScopeSummary(p: { period?: string; assetId?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.scope(p),
-    queryFn: ({ signal }) => swallowNotFound(emissionsApi.scopeSummary(p, signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(emissionsApi.scopeSummary(p, signal)).then((data) => data ?? fallbackScopeSummary),
   });
 }
 
 export function useSources(filters: SourceFilters) {
   return useQuery({
     queryKey: emissionsKeys.sources(filters),
-    queryFn: ({ signal }) => swallowNotFound(emissionsApi.sources(filters, signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(emissionsApi.sources(filters, signal)).then((data) => data ?? fallbackSources),
   });
 }
 
 export function useAssets() {
   return useQuery({
     queryKey: emissionsKeys.assets,
-    queryFn: ({ signal }) => swallowNotFound(emissionsApi.assets(signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(emissionsApi.assets(signal)).then((data) => data ?? fallbackAssetRefs),
     staleTime: 5 * 60_000,
   });
 }
@@ -42,14 +52,18 @@ export function useAssets() {
 export function useFinanced(p: { period?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.financed(p),
-    queryFn: ({ signal }) => swallowNotFound(emissionsApi.financed(p, signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(emissionsApi.financed(p, signal)).then((data) => data ?? fallbackFinanced),
   });
 }
 
 export function useFlaringReconciliation(p: { period?: string; assetId?: string } = {}) {
   return useQuery({
     queryKey: emissionsKeys.reconciliation(p),
-    queryFn: ({ signal }) => swallowNotFound(emissionsApi.flaringReconciliation(p, signal)),
+    queryFn: ({ signal }) =>
+      swallowNotFound(emissionsApi.flaringReconciliation(p, signal)).then(
+        (data) => data ?? fallbackFlaringReconciliation(p.assetId),
+      ),
   });
 }
 

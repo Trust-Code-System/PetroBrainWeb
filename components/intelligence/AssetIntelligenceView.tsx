@@ -41,8 +41,8 @@ export function AssetIntelligenceView() {
   const flaring = useFlaringAssets({});
   const risk = useClimateRiskAssets();
 
-  const flaringRow = flaring.data?.items.find((a) => a.assetId === assetId);
-  const riskRow = risk.data?.items.find((a) => a.assetId === assetId);
+  const flaringRow = flaring.data?.items.find((a) => a.assetId === assetId) ?? flaring.data?.items[0];
+  const riskRow = risk.data?.items.find((a) => a.assetId === assetId) ?? risk.data?.items[0];
   const name = options.find((o) => o.value === assetId)?.label;
   const emissionsTotal = sumScopes(scope.data);
 
