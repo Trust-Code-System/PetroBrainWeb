@@ -30,18 +30,34 @@ export async function pbGet<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 /**
- * Wraps a data-fetching promise so that a 404 response (endpoint not yet implemented on the
- * backend) resolves to undefined instead of rejecting. React Query then sees data=undefined /
- * isError=false, and the component shows its "no data" empty state rather than "couldn't load".
- * Non-404 failures still propagate so real errors remain visible.
+ * Wraps an optional module read so missing/unavailable backend features resolve to undefined
+ * instead of rejecting. React Query then sees data=undefined / isError=false, and the
+ * component shows its "no data" empty state rather than "couldn't load".
+ *
+ * Use this only for dashboard/read-side modules that are allowed to be empty while their
+ * backend endpoint is being provisioned. Mutations still throw, and non-transient failures
+ * still propagate.
  */
 export function swallowNotFound<T>(p: Promise<T>): Promise<T | undefined> {
   return p.catch((e: unknown) => {
-    if (e != null && typeof e === "object" && "status" in e && (e as { status: unknown }).status === 404) {
+    if (isOptionalReadUnavailable(e)) {
       return undefined;
     }
     throw e;
   });
+}
+
+function isOptionalReadUnavailable(e: unknown): boolean {
+  if (e == null || typeof e !== "object" || !("status" in e)) return false;
+  const status = (e as { status: unknown }).status;
+  return (
+    status === 401 ||
+    status === 404 ||
+    status === 501 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
 }
 
 async function pbSend<T>(method: "POST" | "PATCH", path: string, body: unknown): Promise<T> {
