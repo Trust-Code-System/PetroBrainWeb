@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { appNav, activeNavHref } from "@/lib/appNav";
+import { visibleAppNav, activeNavHref } from "@/lib/appNav";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { useChrome } from "@/components/app/ChromeProvider";
 import { navIcons, CloseIcon, CollapseIcon } from "@/components/app/icons";
@@ -123,7 +123,7 @@ function NavList({ collapsed, pathname }: { collapsed: boolean; pathname: string
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="App sections">
       <ul className="space-y-4">
-        {appNav.map((group) => (
+        {visibleAppNav.map((group) => (
           <li key={group.heading}>
             {!collapsed && (
               <p className="px-3 pb-1.5 font-mono text-[11px] uppercase tracking-wider text-faint">

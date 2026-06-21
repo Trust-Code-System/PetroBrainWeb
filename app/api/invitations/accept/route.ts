@@ -8,7 +8,7 @@ export const maxDuration = 60;
 const API_URL = (process.env.PETROBRAIN_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 export async function POST(request: Request) {
-  const limited = enforceRateLimit(request, "invitation-accept", 5, 15 * 60_000);
+  const limited = await enforceRateLimit(request, "invitation-accept", 5, 15 * 60_000);
   if (limited) return limited;
 
   const body = (await request.json().catch(() => null)) as

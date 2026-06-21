@@ -22,7 +22,7 @@ function asString(v: unknown): string {
 
 export async function POST(req: Request) {
   // Per-IP rate limit: 5 submissions / 10 min. Cheap protection against lead-form spam.
-  const limited = enforceRateLimit(req, "demo", 5, 10 * 60_000);
+  const limited = await enforceRateLimit(req, "demo", 5, 10 * 60_000);
   if (limited) return limited;
 
   let data: Payload;

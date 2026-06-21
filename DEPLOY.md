@@ -1,6 +1,6 @@
 # PetroBrain — Deploy Checklist
 
-Single Next.js 14 app: the public marketing site **and** the logged-in product at `/app`.
+Single Next.js 16 app: the public marketing site **and** the logged-in product at `/app`.
 Deploy target: **Vercel** (or any Node host running `next start`).
 
 ---
@@ -41,6 +41,8 @@ are exposed to the browser (no secrets); everything else is server-only.
 | `CRM_WEBHOOK_URL` | Demo + MRV lead webhook (server-only). Blank = leads logged (PII-redacted) only. |
 | `NEXT_PUBLIC_CALCOM_URL` | Cal.com booking embed on `/demo`. |
 | `NEXT_PUBLIC_DEMOS_ENABLED` | `true` enables the marketing interactive demos. Default off. |
+| `NEXT_PUBLIC_APP_STAGE` | `early-access` (default) shows only the `/app` modules wired to the live backend; `full` shows every nav module. Flip to `full` once §2a is complete. |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | **server-only.** Enable distributed (cross-instance) rate limiting. When unset, `lib/rateLimit.ts` falls back to the per-instance in-memory limiter. Create a free Redis DB at upstash.com; use the **REST** URL + token. |
 | `NEXT_PUBLIC_APP_URL` | Legacy; unused by nav. Leave blank. |
 
 ---
@@ -173,7 +175,7 @@ The frontend keeps an honest "not available" affordance for each; build only whe
 npm ci
 npm run lint        # ESLint — 0 warnings/errors
 npm run typecheck   # contentlayer build + tsc --noEmit
-npm test            # vitest — 82 tests
+npm test            # vitest — 184 tests
 npm run build       # next build — all routes compile
 npm run test:e2e    # Playwright smoke + axe a11y (build first; needs Chromium)
 ```
@@ -238,11 +240,16 @@ Built into this repo — verify the env-dependent bits are configured for prod.
   openmaptiles/Plausible/Cal.com + operator-set map & hazard-tile origins via env), `X-Frame-
   Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`,
   HSTS. **If you add a new external script/style/connect origin, extend the CSP** or it's blocked.
-- **Rate limiting** (`lib/rateLimit.ts`, per-IP, best-effort in-memory): lead forms (5/10min),
-  uploads (10–20/5min), copilot (30/min), and the auth credential paths (10/5min).
-  ⚠️ Per-instance only (resets on cold start, not shared across instances) — for distributed
-  enforcement add a **Vercel WAF rule** or Upstash. This also closes the Better Auth limiter-
-  bypass advisory (GHSA-p6v2-xcpg-h6xw) at the edge.
+- **Rate limiting** (`lib/rateLimit.ts`, per-IP): lead forms (5/10min), uploads (10–20/5min),
+  copilot (30/min), and the auth credential paths (10/5min). **Distributed when
+  `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set** (shared sliding window across
+  all instances; survives cold starts) — set these in prod. Without them it degrades to a
+  per-instance in-memory limiter (fine for dev). The edge limiter in front of the auth routes
+  also closes the Better Auth limiter-bypass advisory regardless of backend.
+- **Auth dependency:** `@neondatabase/auth` pinned to the latest beta (`0.4.2-beta`). The
+  remaining `better-auth` advisory (GHSA-wxw3-q3m9-c3jr, OAuth `state`) is **not applicable** —
+  this app uses email/password only (no social OAuth). Re-bump when Neon's beta updates its
+  `better-auth` pin; `.github/workflows/security.yml` will flag future highs.
 - **Upload validation** (`lib/uploads.ts`): per-route size caps (5–25 MB) + extension allowlist,
   enforced before buffering. The backend remains the authority for deep content/MIME inspection
   + malware scanning — **confirm it does** (open item).

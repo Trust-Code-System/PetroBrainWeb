@@ -1,0 +1,27 @@
+name: ZAP Baseline
+
+# Runs the OWASP ZAP *baseline* (passive spider + passive rules — no attack traffic)
+# against a successfully-deployed Vercel preview URL. Safe and non-destructive.
+# Do NOT point the full/active scan at production.
+on:
+  deployment_status: {}
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  zap:
+    name: passive DAST (preview)
+    if: ${{ github.event.deployment_status.state == 'success' && github.event.deployment_status.environment != 'Production' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ github.event.deployment_status.target_url }}
+          # -a includes passive rules marked "informational"; still passive-only.
+          cmd_options: "-a"

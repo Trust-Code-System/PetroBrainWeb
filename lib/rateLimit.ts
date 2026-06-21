@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 /**
- * Best-effort in-memory rate limiter (fixed window).
+ * Rate limiting with two backends, chosen automatically:
  *
- * ⚠️ Limitation: serverless functions don't share memory across instances, and the store
- * resets on a cold start. So this is a *per-instance* limiter — it raises the cost of
- * abuse and protects against naive floods, but it is NOT a distributed guarantee. For
- * production-grade, cross-instance limiting (and to close the Better Auth limiter-bypass
- * advisory) put a Vercel WAF rule or @upstash/ratelimit in front. This module is the
- * dependency-free first line of defence, not the last.
+ *   1. **Upstash Redis (preferred, distributed)** — when UPSTASH_REDIS_REST_URL +
+ *      UPSTASH_REDIS_REST_TOKEN are set, a sliding-window limiter shared across every
+ *      serverless instance. Survives cold starts and can't be bypassed by hitting a
+ *      different instance. This closes the Better Auth limiter-bypass advisory at the edge.
+ *
+ *   2. **In-memory fixed window (fallback)** — when Upstash env is absent (local dev, CI,
+ *      or before you provision Redis). Per-instance and resets on cold start, so it raises
+ *      the cost of abuse but is NOT a distributed guarantee. Dependency-free first line.
+ *
+ * Callers use `enforceRateLimit` and don't care which backend is active. It's async because
+ * the Upstash path makes a network round-trip; the in-memory path resolves immediately.
  */
 
 interface Bucket {
@@ -29,7 +36,8 @@ export interface RateLimitResult {
 }
 
 /**
- * Count one hit against `key`. Returns `ok:false` once `limit` is exceeded within `windowMs`.
+ * Count one hit against `key` (in-memory). Returns `ok:false` once `limit` is exceeded
+ * within `windowMs`. Used directly as the fallback backend and still unit-testable.
  */
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
@@ -86,17 +94,71 @@ export function rateLimited(result: RateLimitResult): NextResponse {
   );
 }
 
+// ── Upstash (distributed) backend ───────────────────────────────────────────────────────
+// Lazily build a single Redis client and cache one Ratelimit instance per (limit, window)
+// combo, since each instance is configured with a fixed sliding window.
+
+let redisClient: Redis | null | undefined;
+const limiters = new Map<string, Ratelimit>();
+
+function getRedis(): Redis | null {
+  if (redisClient !== undefined) return redisClient;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  redisClient = url && token ? new Redis({ url, token }) : null;
+  return redisClient;
+}
+
+function getUpstashLimiter(limit: number, windowMs: number): Ratelimit | null {
+  const redis = getRedis();
+  if (!redis) return null;
+  const cacheKey = `${limit}:${windowMs}`;
+  let limiter = limiters.get(cacheKey);
+  if (!limiter) {
+    const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(limit, `${windowSeconds} s`),
+      prefix: "pb-rl",
+      analytics: false,
+    });
+    limiters.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
 /**
  * One-shot helper: count a hit for `req` under `name` and return a 429 response if the
- * limit is exceeded, otherwise null. `name` namespaces the bucket so different routes
- * don't share counts.
+ * limit is exceeded, otherwise null. `name` namespaces the bucket so different routes don't
+ * share counts. Uses Upstash when configured, else the in-memory fallback. If Upstash errors
+ * (network blip), it degrades to the in-memory limiter rather than failing the request.
  */
-export function enforceRateLimit(
+export async function enforceRateLimit(
   req: Request,
   name: string,
   limit: number,
   windowMs: number,
-): NextResponse | null {
-  const result = rateLimit(`${name}:${clientIp(req)}`, limit, windowMs);
+): Promise<NextResponse | null> {
+  const key = `${name}:${clientIp(req)}`;
+
+  const limiter = getUpstashLimiter(limit, windowMs);
+  if (limiter) {
+    try {
+      const r = await limiter.limit(key);
+      if (r.success) return null;
+      const retryAfter = Math.max(1, Math.ceil((r.reset - Date.now()) / 1000));
+      return rateLimited({
+        ok: false,
+        limit: r.limit,
+        remaining: r.remaining,
+        resetAt: r.reset,
+        retryAfter,
+      });
+    } catch {
+      // Upstash unreachable — fall through to the in-memory limiter for this request.
+    }
+  }
+
+  const result = rateLimit(key, limit, windowMs);
   return result.ok ? null : rateLimited(result);
 }

@@ -1,0 +1,19 @@
+{
+  "defaults": {
+    "standard": "WCAG2AA",
+    "timeout": 30000,
+    "chromeLaunchConfig": {
+      "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+    }
+  },
+  "urls": [
+    "http://localhost:3000/",
+    "http://localhost:3000/product",
+    "http://localhost:3000/intelligence",
+    "http://localhost:3000/safety",
+    "http://localhost:3000/security",
+    "http://localhost:3000/resources",
+    "http://localhost:3000/demo",
+    "http://localhost:3000/legal/privacy"
+  ]
+}
