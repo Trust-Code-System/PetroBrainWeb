@@ -13,6 +13,13 @@ jobs:
     name: accessibility (WCAG2AA)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Throwaway auth values so the build AND `next start` (auth validates the cookie secret
+    # at runtime) don't throw. Job-level so every step inherits them. Marketing pages are
+    # static and hit no auth/backend, so dummy values are safe.
+    env:
+      NEON_AUTH_BASE_URL: https://ci.neonauth.invalid/neondb/auth
+      NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
+      PETROBRAIN_API_URL: https://api.invalid
     steps:
       - uses: actions/checkout@v5
 
@@ -26,10 +33,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          NEON_AUTH_BASE_URL: https://ci.neonauth.invalid/neondb/auth
-          NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
-          PETROBRAIN_API_URL: https://api.invalid
 
       - name: Start server
         run: |
