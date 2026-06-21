@@ -4,7 +4,7 @@
 > Intelligence Platform for oil & gas**. Any AI/dev session must read this file first,
 > continue from **Next steps**, and tick boxes as work completes.
 
-Last updated: 2026-06-21 · Session 17 (Task ownership → assigned_to_user_ids mapping wired; Item 1 RBAC code-complete, deploy-blocked)
+Last updated: 2026-06-21 · Session 18 (Audit-log filters + item-3 OpenAPI gap audit + production hardening; only deploy-gated work remains)
 
 ---
 
@@ -264,6 +264,36 @@ New IA (groups → items), base path `/app`:
 ---
 
 ## 15. Session log
+
+### Session 18 — 2026-06-21 (Audit-log filters + item-3 gap audit + production hardening)
+
+Pushed the ordered queue as far as it goes without a deployment. **Items 3, 4, and the buildable
+parts of 5 are done; only deploy-gated work remains** (Vercel deploy + live verification of 1–5).
+
+- **Item 4 — Audit-log filters (code complete + tested).** `lib/governance/audit.ts`: new
+  `AuditFilters` + `auditQueryString` (maps userId/module/action/riskLevel/status/from/to → the real
+  `/admin/audit` params, omitting empties); `fetchAuditLog(filters)`, `useAuditLog(filters)` (filters in
+  the query key), and `exportAuditLog(format, filters)` (export honours the filters).
+  `components/governance/AuditLogPanel.tsx`: a compact filter form (user, module, risk Select, from/to
+  dates) with draft→Apply→Clear; honest states preserved + a "no matches" vs "nothing logged yet"
+  distinction. +3 tests (param mapping, empties omitted, filters reach the URL).
+- **Item 3 — backend-gated features inspected against the live OpenAPI (94 routes); gaps recorded,
+  nothing faked.** No `/chat` attachment route, no report-generation/job route, no stored-file
+  content/URL route → Copilot attach-file, generate-report, and document inline preview all stay
+  honest-deferred (drawer note kept). Richer AI Governance attribution/export is already delivered via
+  `/admin/audit` (+ filters) and `/admin/feedback*`. Recorded precisely in DEPLOY.md §2a. Noted
+  `/research/*` (deep-research agent) and `/chat/shares` (shareable conversations) as available-but-
+  unrequested future features.
+- **Item 5 — hardening (buildable parts).** Responsive code audit: rebuilt modules use mobile-first
+  grids + `overflow-x-auto` tables + bottom-sheet dialogs → pass. Secrets/env-boundary audit: all
+  server-only secrets stay server-side, every `NEXT_PUBLIC_*` is non-secret, no hardcoded secrets →
+  pass. Git remote already reconciled (PR #2 merged to `main`). Production gate green.
+
+**Changed files (this session):** `lib/governance/audit.ts`,
+`components/governance/AuditLogPanel.tsx`, `lib/governance/__tests__/audit.test.ts`, `DEPLOY.md`
+(§2a backend-gaps note), this file. typecheck + lint + build green; full suite **184/184** (38 files,
++3). **Remaining (all deploy-gated):** deploy backend (Render) + frontend (Vercel), then live-verify
+items 1 (RBAC), 2 (task ownership), 4 (audit filters) end-to-end and run post-deploy smoke tests.
 
 ### Session 17 — 2026-06-21 (Task ownership → assigned_to_user_ids mapping; queue item 2)
 
@@ -841,18 +871,41 @@ closed the last one — Assets+Calc). Remaining work is backend.
   - [ ] **Live-verify** against the deployed backend once RBAC (item 1) is live: confirm a picked
         member persists as `assigned_to_user_ids`, round-trips on hydrate, and the free-text fallback
         still works when `/organizations/current/members` is unavailable. Tick item 2 after this.
-- [ ] **3. Backend-gated features — inspect and deliver independently.** In order: Copilot
-      attachments, report generation/jobs, stored-document byte/URL preview, then richer AI
-      Governance attribution and approval logs. For each capability, inspect the live OpenAPI first;
-      implement only when the Render API exposes a matching contract; otherwise record the precise
-      missing backend endpoint/schema and do not fake it.
-- [ ] **4. Audit-log improvements.** Add user, module, and date-range filters backed by the real
-      `/admin/audit` query parameters; preserve honest unavailable/empty states; test query mapping.
-- [ ] **5. Production hardening.** Verify every rebuilt module at mobile/tablet/desktop widths;
-      polish tables, drawers and destructive confirmations; audit secrets and server/client env
-      boundaries; reconcile the Git remote; verify Vercel environment variables and production
-      build; deploy; then run authenticated smoke tests and `/api/health` checks against Vercel and
-      Render. Record URLs, results, remaining risks, and rollback steps.
+- [~] **3. Backend-gated features — INSPECTED against live OpenAPI (Session 18); gaps recorded, no
+      contracts to build.** For each capability, inspect the live OpenAPI first; implement only when
+      the Render API exposes a matching contract; otherwise record the precise missing endpoint and
+      do not fake it.
+  - [x] **Copilot attachments** — ⛔ no route (`POST /chat` body is `{message,module?,asset_context?}`).
+        Needs e.g. `POST /chat/attachments` / multipart `/chat`. Recorded in DEPLOY.md §2a.
+  - [x] **Report generation/jobs** — ⛔ no `/reports*`; a separate `/research/*` agent exists
+        (plan→approve→run→events→export) = a larger standalone feature, out of scope until prioritised.
+  - [x] **Stored-document byte/URL preview** — ⛔ no file-content/URL route (`GET /documents/{id}` is
+        metadata; `POST /documents/preview` is pre-ingestion text). Drawer keeps honest note.
+  - [x] **Richer AI Governance attribution + export** — ✅ delivered: `/admin/audit` (+ filters, item 4),
+        `/admin/audit/export`, `/admin/feedback*`. `/chat/shares` available but unrequested (future).
+- [~] **4. Audit-log filters — CODE COMPLETE + UNIT-TESTED; LIVE-VERIFY PENDING (Session 18).** Added
+      user / module / risk / date-range filters to `AuditLogPanel`, mapped to the real `/admin/audit`
+      query params (`user_id`/`module`/`risk_level`/`from`/`to`), draft→Apply→Clear, export honours the
+      filters; honest unavailable/empty (incl. "no matches" vs "nothing logged"). `lib/governance/audit.ts`
+      `auditQueryString`/`fetchAuditLog(filters)`/`useAuditLog(filters)`/`exportAuditLog(format,filters)`;
+      +3 tests (param mapping, empties omitted, filters reach the request URL). Live-verify with an admin
+      backend, then tick.
+- [~] **5. Production hardening — buildable parts DONE; deploy parts pending.**
+  - [x] **Mobile/tablet/desktop responsive audit** — code-level pass: rebuilt modules use mobile-first
+        grids (start `grid-cols-2` or `sm:`/`lg:` prefixes), `DocumentList` uses `overflow-x-auto`+`min-w`,
+        dialogs are `max-h-[92dvh]` bottom-sheets. (Pixel verification needs a deploy.)
+  - [x] **Secrets + server/client env-boundary audit** — pass: all server-only secrets
+        (`PETROBRAIN_API_URL`, `NEON_AUTH_*`, `CRM_WEBHOOK_URL`, `EIA_API_KEY`) used only in API
+        routes/server components/server libs; every `NEXT_PUBLIC_*` is non-secret config; only secret-like
+        literal is the labelled dummy e2e cookie in `playwright.config.ts`. No hardcoded secrets.
+  - [x] **Reconcile the Git remote** — origin → `Trust-Code-System/PetroBrainWeb`; rebuild merged to `main`
+        (PR #2).
+  - [x] **Production build green** — `typecheck`+`lint`+`build`+`test` (184/184) all pass; DEPLOY.md §1
+        documents every env var the code uses (no new vars from item 4).
+  - [ ] **Vercel env + deploy** (user-side): set `PETROBRAIN_API_URL`, `NEON_AUTH_*`, `NEXT_PUBLIC_SITE_URL`;
+        deploy.
+  - [ ] **Post-deploy smoke tests** (deploy-gated): authenticated smoke + `/api/health` on Vercel & Render;
+        record URLs, results, risks, rollback.
 
 **Execution rule:** complete and tick one item before starting the next. Every item requires its
 relevant unit/integration tests plus `typecheck`, `lint`, full test suite, and production build. Update

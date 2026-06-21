@@ -5,27 +5,63 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/providers/ToastProvider";
-import { exportAuditLog, useAuditLog, type AuditEntry } from "@/lib/governance/audit";
+import {
+  exportAuditLog,
+  useAuditLog,
+  type AuditEntry,
+  type AuditFilters,
+} from "@/lib/governance/audit";
 
 /**
  * AuditLogPanel — the account-wide AI activity log from the governance backend (`/admin/audit`).
- * This is the real per-user / per-module attribution + export that was previously "on the roadmap".
- * It degrades honestly: while loading it shows skeletons; if the backend returns no access/route
- * (`null`) it says so and points back to the on-device usage above; an empty log is stated plainly.
+ * Real per-user / per-module attribution + export. Filters (user, module, risk, date range) map to
+ * the live `/admin/audit` query params; the export honours the same filters. Degrades honestly:
+ * skeletons while loading; an explicit "needs admin" note when the route returns `null`; a clear
+ * "no matches" vs "nothing logged yet" distinction when empty.
  */
+
+const RISK_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+];
+
+const EMPTY: AuditFilters = {};
+
 export function AuditLogPanel() {
-  const { data, isLoading } = useAuditLog();
   const { show } = useToast();
+  const [draft, setDraft] = useState<AuditFilters>(EMPTY);
+  const [filters, setFilters] = useState<AuditFilters>(EMPTY);
+  const { data, isLoading, isFetching } = useAuditLog(filters);
   const [exporting, setExporting] = useState(false);
 
   const entries = data ?? null; // null = unavailable; [] = available but empty
   const hasEntries = Array.isArray(entries) && entries.length > 0;
+  const filtersActive = Object.values(filters).some(Boolean);
+
+  function setField<K extends keyof AuditFilters>(key: K, value: string) {
+    setDraft((prev) => ({ ...prev, [key]: value || undefined }));
+  }
+
+  function apply(e: React.FormEvent) {
+    e.preventDefault();
+    setFilters(draft);
+  }
+
+  function clear() {
+    setDraft(EMPTY);
+    setFilters(EMPTY);
+  }
 
   async function handleExport() {
     setExporting(true);
     try {
-      await exportAuditLog("csv");
+      await exportAuditLog("csv", filters);
       show({ message: "Audit log export requested", tone: "success" });
     } catch {
       show({ message: "Couldn't export the audit log", tone: "danger" });
@@ -50,6 +86,52 @@ export function AuditLogPanel() {
         )}
       </div>
 
+      {/* Filters — map to the live /admin/audit query params. Hidden only when truly unavailable. */}
+      {entries !== null && (
+        <form
+          onSubmit={apply}
+          className="mb-4 grid gap-3 rounded-md border border-border-subtle bg-surface-2 p-3 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <Field id="audit-user" label="User">
+            <Input
+              value={draft.userId ?? ""}
+              onChange={(e) => setField("userId", e.target.value)}
+              placeholder="email or id"
+            />
+          </Field>
+          <Field id="audit-module" label="Module">
+            <Input
+              value={draft.module ?? ""}
+              onChange={(e) => setField("module", e.target.value)}
+              placeholder="e.g. emissions, documents"
+            />
+          </Field>
+          <Select
+            label="Risk level"
+            placeholder="Any"
+            options={RISK_OPTIONS}
+            value={draft.riskLevel ?? ""}
+            onChange={(v) => setField("riskLevel", v)}
+          />
+          <Field id="audit-from" label="From">
+            <Input type="date" value={draft.from ?? ""} onChange={(e) => setField("from", e.target.value)} />
+          </Field>
+          <Field id="audit-to" label="To">
+            <Input type="date" value={draft.to ?? ""} onChange={(e) => setField("to", e.target.value)} />
+          </Field>
+          <div className="flex items-end gap-2">
+            <Button type="submit" size="sm" disabled={isFetching}>
+              {isFetching ? "Applying…" : "Apply"}
+            </Button>
+            {filtersActive && (
+              <Button type="button" variant="ghost" size="sm" onClick={clear}>
+                Clear
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
+
       {isLoading ? (
         <div className="space-y-2" aria-hidden>
           <Skeleton className="h-9 w-full" />
@@ -64,11 +146,13 @@ export function AuditLogPanel() {
         </div>
       ) : entries.length === 0 ? (
         <p className="py-6 text-center text-sm text-secondary">
-          No account-wide AI activity has been logged yet.
+          {filtersActive
+            ? "No AI activity matches these filters."
+            : "No account-wide AI activity has been logged yet."}
         </p>
       ) : (
         <ul className="divide-y divide-border-subtle">
-          {entries.slice(0, 12).map((e) => (
+          {entries.slice(0, 25).map((e) => (
             <AuditRow key={e.id} entry={e} />
           ))}
         </ul>

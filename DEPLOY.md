@@ -147,6 +147,20 @@ which needs the accounts/RBAC backend to resolve names → ids; `department` rid
 React Query is intentionally *not* used at the store surface because its async `{data}` shape would
 break the synchronous component API; the proxy is still the system of record.
 
+**Backend-gated features — inspected against the live OpenAPI (Session 18), NOT buildable yet.**
+The frontend keeps an honest "not available" affordance for each; build only when the contract appears.
+- **Copilot attach-file:** no attachment/upload-to-chat route exists (`POST /chat` body is
+  `{ message, module?, asset_context? }`). Needs e.g. `POST /chat/attachments` or a multipart `/chat`.
+- **Copilot generate-report / report jobs:** no report-generation contract (`/reports*` is unimplemented).
+  A separate **`/research/*`** agent exists (plan→approve→run→events→export) — a larger standalone
+  feature, not the "turn this answer into a report" button; out of scope until prioritised.
+- **Document inline preview:** no endpoint serves a stored file's bytes/URL. `GET /documents/{id}`
+  returns metadata only and `POST /documents/preview` takes raw `text` (pre-ingestion). Drawer keeps
+  its honest "preview not available" note until a file-content/URL route exists.
+- **AI Governance attribution + export:** delivered — `/admin/audit` (now with user/module/date/risk
+  filters) + `POST /admin/audit/export` + `/admin/feedback*`. `/chat/shares` (shareable conversations)
+  is available but unrequested — a future copilot-workspace add.
+
 **Cross-cutting:** all Neon users currently resolve to one tenant (`default_signup_tenant_id`)
 — per-user tenant/role mapping is a backend follow-up. Render free tier cold-starts (~50s) can
 500/﻿time-out the *first* request after idle.

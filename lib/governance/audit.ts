@@ -25,6 +25,19 @@ export type AuditEntry = {
   summary?: string;
 };
 
+/** Filters mapped to the live `/admin/audit` query params (all optional). */
+export type AuditFilters = {
+  /** Backend user email or id. */
+  userId?: string;
+  module?: string;
+  action?: string;
+  riskLevel?: string;
+  status?: string;
+  /** yyyy-mm-dd. */
+  from?: string;
+  to?: string;
+};
+
 type Raw = Record<string, unknown>;
 
 const str = (v: unknown): string | undefined =>
@@ -73,13 +86,28 @@ function isUnavailable(e: unknown): boolean {
   );
 }
 
-/** Fetch recent audit entries, or `null` when the endpoint isn't available to this user. */
+/** Build the `/admin/audit` query string from filters + a row limit (empties omitted). */
+export function auditQueryString(filters: AuditFilters = {}, limit = 25): string {
+  return qs({
+    limit: String(limit),
+    user_id: filters.userId?.trim() || undefined,
+    module: filters.module?.trim() || undefined,
+    action: filters.action?.trim() || undefined,
+    risk_level: filters.riskLevel || undefined,
+    status: filters.status || undefined,
+    from: filters.from || undefined,
+    to: filters.to || undefined,
+  });
+}
+
+/** Fetch audit entries (optionally filtered), or `null` when the endpoint isn't available. */
 export async function fetchAuditLog(
+  filters: AuditFilters = {},
   limit = 25,
   signal?: AbortSignal,
 ): Promise<AuditEntry[] | null> {
   try {
-    const raw = await pbGet<unknown>(`admin/audit${qs({ limit: String(limit) })}`, signal);
+    const raw = await pbGet<unknown>(`admin/audit${auditQueryString(filters, limit)}`, signal);
     return unwrap(raw)
       .map(mapAuditEntry)
       .filter((e) => e.id);
@@ -89,10 +117,10 @@ export async function fetchAuditLog(
   }
 }
 
-export function useAuditLog() {
+export function useAuditLog(filters: AuditFilters = {}) {
   return useQuery({
-    queryKey: ["governance", "audit"],
-    queryFn: ({ signal }) => fetchAuditLog(25, signal),
+    queryKey: ["governance", "audit", filters],
+    queryFn: ({ signal }) => fetchAuditLog(filters, 25, signal),
     staleTime: 60_000,
   });
 }
@@ -101,11 +129,22 @@ export function useAuditLog() {
  * Request an export of the audit log. Handles both a file response (download) and a JSON response
  * carrying a download URL. Throws on failure so the caller can surface an honest error toast.
  */
-export async function exportAuditLog(format: "csv" | "json" = "csv"): Promise<void> {
+export async function exportAuditLog(
+  format: "csv" | "json" = "csv",
+  filters: AuditFilters = {},
+): Promise<void> {
   const res = await fetch("/api/pb/admin/audit/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ format }),
+    body: JSON.stringify({
+      format,
+      user_id: filters.userId?.trim() || null,
+      module: filters.module?.trim() || null,
+      action: filters.action?.trim() || null,
+      risk_level: filters.riskLevel || null,
+      from: filters.from || null,
+      to: filters.to || null,
+    }),
   });
   if (!res.ok) throw new ApiError(res.status, `Export failed (HTTP ${res.status}).`);
 
