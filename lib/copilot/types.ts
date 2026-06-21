@@ -36,6 +36,8 @@ export interface ToolActivity {
 
 export interface ChatMessage {
   id: string;
+  /** Stable backend turn id used for idempotent answer feedback. */
+  turnId?: string;
   role: ChatRole;
   content: string;
   citations?: Citation[];
@@ -80,5 +82,6 @@ export type StreamEvent =
   | { type: "confidence"; confidence: Confidence }
   | { type: "tool"; tool: ToolActivity }
   | { type: "action"; action: AppAction }
+  | { type: "turn"; turnId: string }
   | { type: "done" }
   | { type: "error"; message: string };

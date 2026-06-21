@@ -14,8 +14,18 @@ import type { ChatMessage } from "@/lib/copilot/types";
  * assistant turns render streamed markdown plus the brand's honesty furniture: a
  * verification Banner (when the orchestrator flags a safety-critical answer), source
  * CitationChips, a ConfidenceLabel, and read-tool activity. A caret shows live streaming.
+ *
+ * `footer` is an optional slot rendered at the bottom of an assistant turn's content column
+ * (used by the full Copilot workspace to attach a per-answer action toolbar). The page-aware
+ * bubble omits it, so its behaviour is unchanged.
  */
-export function MessageBubble({ message }: { message: ChatMessage }) {
+export function MessageBubble({
+  message,
+  footer,
+}: {
+  message: ChatMessage;
+  footer?: React.ReactNode;
+}) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -104,6 +114,9 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
             ))}
           </div>
         )}
+
+        {/* Per-answer toolbar slot (workspace only; bubble omits it). */}
+        {footer && !streaming && message.content ? footer : null}
       </div>
     </div>
   );

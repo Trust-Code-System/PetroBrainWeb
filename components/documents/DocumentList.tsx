@@ -19,11 +19,14 @@ export function DocumentList({
   isLoading,
   isError,
   filtered,
+  onSelect,
 }: {
   items: DocItem[];
   isLoading: boolean;
   isError: boolean;
   filtered: boolean;
+  /** Open a document's metadata drawer. When omitted, names render as plain text. */
+  onSelect?: (doc: DocItem) => void;
 }) {
   if (isLoading) {
     return (
@@ -72,7 +75,17 @@ export function DocumentList({
           {items.map((d) => (
             <tr key={d.id} className="border-b border-border-subtle last:border-0 hover:bg-surface-2">
               <td className="px-3 py-2.5">
-                <span className="font-medium text-primary">{d.name}</span>
+                {onSelect ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(d)}
+                    className="text-left font-medium text-primary underline-offset-2 hover:text-accent hover:underline"
+                  >
+                    {d.name}
+                  </button>
+                ) : (
+                  <span className="font-medium text-primary">{d.name}</span>
+                )}
                 {d.sizeBytes != null && <span className="ml-2 text-xs text-faint">{formatBytes(d.sizeBytes)}</span>}
               </td>
               <td className="px-3 py-2.5 text-secondary">{DOC_TYPE_LABEL[d.type]}</td>

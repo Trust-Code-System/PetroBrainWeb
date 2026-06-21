@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo } from "react";
 import { authClient } from "@/lib/auth/client";
+import { hasPermission, type Permission } from "@/lib/auth/permissions";
+import { useCurrentPrincipal } from "@/lib/auth/principal";
 import type { User } from "@/lib/auth/types";
 
 /**
@@ -19,6 +21,8 @@ type AuthContextValue = {
   user: User | null;
   /** Convenience flags for RBAC gating later. */
   isAuthenticated: boolean;
+  principalReady: boolean;
+  can: (permission: Permission) => boolean;
   signOut: () => Promise<void>;
 };
 
@@ -31,7 +35,19 @@ export function AuthProvider({
   initialUser: User | null;
   children: React.ReactNode;
 }) {
-  const [user] = useState<User | null>(initialUser);
+  const principal = useCurrentPrincipal();
+  const user = useMemo<User | null>(() => {
+    if (!initialUser) return null;
+    return {
+      ...initialUser,
+      id: principal.data?.id ?? initialUser.id,
+      email: principal.data?.email || initialUser.email,
+      // Never trust a UI/session role when the PetroBrain backend could not resolve it.
+      role: principal.data?.role ?? "",
+      tenantId: principal.data?.tenantId ?? "",
+      allowedAssets: principal.data?.allowedAssets ?? [],
+    };
+  }, [initialUser, principal.data]);
 
   const signOut = useCallback(async () => {
     try {
@@ -45,8 +61,14 @@ export function AuthProvider({
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: user !== null, signOut }),
-    [user, signOut],
+    () => ({
+      user,
+      isAuthenticated: user !== null,
+      principalReady: principal.isFetched,
+      can: (permission) => hasPermission(user?.role, permission),
+      signOut,
+    }),
+    [user, principal.isFetched, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

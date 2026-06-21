@@ -43,6 +43,7 @@ interface ChatResponseJson {
   answer?: unknown;
   citations?: unknown;
   flags?: unknown;
+  turn_id?: unknown;
 }
 
 /** Coerce one backend citation (string or object) into our Citation, or null to skip. */
@@ -77,6 +78,10 @@ export function eventsFromChatResponse(json: ChatResponseJson): StreamEvent[] {
       const citation = toCitation(c);
       if (citation) events.push({ type: "citation", citation });
     }
+  }
+
+  if (typeof json.turn_id === "string" && json.turn_id.trim()) {
+    events.push({ type: "turn", turnId: json.turn_id });
   }
 
   events.push({ type: "done" });

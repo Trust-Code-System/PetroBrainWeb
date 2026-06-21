@@ -128,6 +128,78 @@ export const navIcons: Record<AppIconKey, (p: IconProps) => React.ReactNode> = {
       <path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" />
     </Svg>
   ),
+
+  /* ---- rebuild IA: new module icons ---- */
+  copilot: (p) => (
+    <Svg {...p}>
+      <path d="M12 3l1.6 4.1L18 8.7l-4.4 1.6L12 14.3l-1.6-4L6 8.7l4.4-1.6z" />
+      <path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z" />
+    </Svg>
+  ),
+  "operations-log": (p) => (
+    <Svg {...p}>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+    </Svg>
+  ),
+  hse: (p) => (
+    <Svg {...p}>
+      <path d="M12 3l7 3v5c0 4.4-3 8.2-7 10-4-1.8-7-5.6-7-10V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </Svg>
+  ),
+  maintenance: (p) => (
+    <Svg {...p}>
+      <path d="M14.7 6.3a3.5 3.5 0 0 0-4.6 4.5L4 17l3 3 6.2-6.1a3.5 3.5 0 0 0 4.5-4.6l-2.2 2.2-2.1-.6-.6-2.1z" />
+    </Svg>
+  ),
+  actions: (p) => (
+    <Svg {...p}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 9l1.5 1.5L11 8M7 15l1.5 1.5L11 14M14 9.5h4M14 15.5h4" />
+    </Svg>
+  ),
+  compliance: (p) => (
+    <Svg {...p}>
+      <path d="M12 3l7 3v6c0 4-3 7.5-7 9-4-1.5-7-5-7-9V6z" />
+      <path d="M9.5 12l1.8 1.8L15 10" />
+    </Svg>
+  ),
+  permits: (p) => (
+    <Svg {...p}>
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <circle cx="9" cy="10.5" r="2.2" />
+      <path d="M14 8.5h4M14 12h4M6.6 20l2.4-2 2.4 2" />
+    </Svg>
+  ),
+  audit: (p) => (
+    <Svg {...p}>
+      <rect x="4" y="3" width="13" height="18" rx="2" />
+      <path d="M8 8h5M8 12h3" />
+      <circle cx="15.5" cy="15.5" r="3" />
+      <path d="M18 18l2.5 2.5" />
+    </Svg>
+  ),
+  environment: (p) => (
+    <Svg {...p}>
+      <path d="M5 20c0-7 5-12 13-13-1 8-6 13-13 13z" />
+      <path d="M5 20c2-5 5-7 9-8.5" />
+    </Svg>
+  ),
+  "ai-governance": (p) => (
+    <Svg {...p}>
+      <path d="M12 3l7 3v5c0 4.4-3 8.2-7 10-4-1.8-7-5.6-7-10V6z" />
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1" />
+      <path d="M12 7.5v2M12 14.5v2M7.5 12h2M14.5 12h2" />
+    </Svg>
+  ),
+  organization: (p) => (
+    <Svg {...p}>
+      <path d="M3 21h18" />
+      <path d="M5 21V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v15M13 21V10h5a1 1 0 0 1 1 1v10" />
+      <path d="M8 9h2M8 13h2M8 17h2" />
+    </Svg>
+  ),
 };
 
 /* ---------- standalone UI icons ---------- */
