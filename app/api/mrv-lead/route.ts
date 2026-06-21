@@ -21,7 +21,7 @@ function asString(v: unknown): string {
 
 export async function POST(req: Request) {
   // Per-IP rate limit: 5 submissions / 10 min.
-  const limited = enforceRateLimit(req, "mrv-lead", 5, 10 * 60_000);
+  const limited = await enforceRateLimit(req, "mrv-lead", 5, 10 * 60_000);
   if (limited) return limited;
 
   let data: Payload;

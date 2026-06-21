@@ -1,0 +1,37 @@
+name: ZAP Baseline
+
+# Runs the OWASP ZAP *baseline* (passive spider + passive rules — no attack traffic)
+# against a successfully-deployed Vercel preview URL. Safe and non-destructive.
+# Do NOT point the full/active scan at production.
+on:
+  deployment_status: {}
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  zap:
+    name: passive DAST (preview)
+    if: ${{ github.event.deployment_status.state == 'success' && github.event.deployment_status.environment != 'Production' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      # v0.15.0+ uses the current upload-artifact API (v0.12.0 crashed on the removed
+      # "Create Artifact Container" endpoint). continue-on-error keeps this advisory scan
+      # from ever blocking a merge even if the action's report-upload step hiccups — the
+      # scan still runs and its PASS/WARN/FAIL summary is in the job logs.
+      - name: ZAP Baseline Scan
+        continue-on-error: true
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ github.event.deployment_status.target_url }}
+          # -a includes "informational" passive rules; -I makes passive WARNs advisory
+          # (don't fail the job — a baseline scan is for visibility, not a hard gate).
+          # Note: on Vercel preview deploys with protection enabled, ZAP may scan the
+          # auth wall rather than the app (shows false "CSP/Permissions-Policy not set").
+          cmd_options: "-a -I"
+          fail_action: false
+          allow_issue_writing: false

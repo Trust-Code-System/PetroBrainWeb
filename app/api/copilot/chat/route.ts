@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   }
 
   // Per-IP cap on copilot turns — each one fans out to the LLM backend, so this guards cost.
-  const limited = enforceRateLimit(req, "copilot", 30, 60_000);
+  const limited = await enforceRateLimit(req, "copilot", 30, 60_000);
   if (limited) return limited;
 
   let body: { messages?: Pick<ChatMessage, "role" | "content">[]; pageContext?: PageContext };

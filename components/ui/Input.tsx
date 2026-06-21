@@ -7,8 +7,11 @@ import { cn } from "@/lib/cn";
 export const controlBase =
   "w-full rounded-md border border-border-strong bg-surface-1 px-3.5 text-sm text-primary placeholder:text-faint transition-colors hover:border-grey-600 disabled:opacity-50 aria-[invalid=true]:border-danger";
 
-export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(controlBase, "h-11", className)} {...props} />;
+export function Input({ className, type = "text", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  // Default type="text" so the rendered <input> is always classified as a text control —
+  // without it, WCAG 1.3.5 (autocomplete tokens like "name"/"organization") can't resolve
+  // the control group. Callers passing type="email"/"password" override this.
+  return <input type={type} className={cn(controlBase, "h-11", className)} {...props} />;
 }
 
 export function Textarea({

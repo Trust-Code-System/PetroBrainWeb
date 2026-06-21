@@ -25,7 +25,7 @@ async function isSensitive(ctx: Ctx): Promise<boolean> {
 export async function POST(req: Request, ctx: Ctx) {
   if (await isSensitive(ctx)) {
     // 10 credential attempts / 5 min / IP.
-    const limited = enforceRateLimit(req, "auth", 10, 5 * 60_000);
+    const limited = await enforceRateLimit(req, "auth", 10, 5 * 60_000);
     if (limited) return limited;
   }
   return handlers.POST(req, ctx);

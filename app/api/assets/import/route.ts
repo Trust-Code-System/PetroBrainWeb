@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
 
-  const limited = enforceRateLimit(req, "import-assets", 20, 5 * 60_000);
+  const limited = await enforceRateLimit(req, "import-assets", 20, 5 * 60_000);
   if (limited) return limited;
 
   const result = await validateUpload(req, UPLOAD_RULES.asset);

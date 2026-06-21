@@ -1,0 +1,43 @@
+name: pa11y
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pa11y-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pa11y:
+    name: accessibility (WCAG2AA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Throwaway auth values so the build AND `next start` (auth validates the cookie secret
+    # at runtime) don't throw. Job-level so every step inherits them. Marketing pages are
+    # static and hit no auth/backend, so dummy values are safe.
+    env:
+      NEON_AUTH_BASE_URL: https://ci.neonauth.invalid/neondb/auth
+      NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
+      PETROBRAIN_API_URL: https://api.invalid
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start server
+        run: |
+          npm run start -- -p 3000 &
+          npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Run pa11y-ci
+        run: npx pa11y-ci

@@ -1,0 +1,39 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: lhci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lhci:
+    name: lighthouse (marketing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Throwaway auth values so the build AND the server LHCI starts (auth validates the
+    # cookie secret at runtime) don't throw. Job-level so the lhci subprocess inherits them.
+    env:
+      NEON_AUTH_BASE_URL: https://ci.neonauth.invalid/neondb/auth
+      NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
+      PETROBRAIN_API_URL: https://api.invalid
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Lighthouse CI
+        run: |
+          npm i -g @lhci/cli@0.14.x
+          lhci autorun

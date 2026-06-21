@@ -15,6 +15,8 @@
  * via hub pages and keep a friendly title through `routeTitles`.
  */
 
+import { isAppHrefLive } from "./featureFlags";
+
 export type AppIconKey =
   // overview
   | "dashboard"
@@ -118,6 +120,16 @@ export const appNav: AppNavGroup[] = [
 
 /** Flat list of every nav item (e.g. for title lookup / route generation). */
 export const appNavItems: AppNavItem[] = appNav.flatMap((g) => g.items);
+
+/**
+ * The nav as shown in the UI for the current launch stage. In "early-access" only modules
+ * wired to the live backend appear (see lib/featureFlags `isAppHrefLive`); groups left empty
+ * are dropped. `appNav`/`appNavItems` stay complete so page-title lookup still resolves for
+ * deep-linked routes. Set NEXT_PUBLIC_APP_STAGE=full to show everything.
+ */
+export const visibleAppNav: AppNavGroup[] = appNav
+  .map((group) => ({ ...group, items: group.items.filter((item) => isAppHrefLive(item.href)) }))
+  .filter((group) => group.items.length > 0);
 
 /**
  * Friendly titles for routes that are NOT top-level nav items — legacy modules now reached
