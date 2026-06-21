@@ -21,7 +21,7 @@ jobs:
       NEON_AUTH_COOKIE_SECRET: ci-build-only-dummy-cookie-secret-0123456789
       PETROBRAIN_API_URL: https://api.invalid
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
