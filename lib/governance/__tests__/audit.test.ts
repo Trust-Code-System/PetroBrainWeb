@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchAuditLog, mapAuditEntry } from "@/lib/governance/audit";
+import { auditQueryString, fetchAuditLog, mapAuditEntry } from "@/lib/governance/audit";
 
 /**
  * AI audit-log client. mapAuditEntry reads the untyped backend rows defensively; fetchAuditLog
@@ -51,7 +51,34 @@ describe("mapAuditEntry", () => {
   });
 });
 
+describe("auditQueryString", () => {
+  it("maps set filters to backend param names and includes the limit", () => {
+    const q = auditQueryString(
+      { userId: "ada@op.co", module: "emissions", riskLevel: "high", from: "2026-01-01", to: "2026-02-01" },
+      25,
+    );
+    expect(q).toContain("limit=25");
+    expect(q).toContain("user_id=ada%40op.co");
+    expect(q).toContain("module=emissions");
+    expect(q).toContain("risk_level=high");
+    expect(q).toContain("from=2026-01-01");
+    expect(q).toContain("to=2026-02-01");
+  });
+
+  it("omits empty / whitespace-only filters", () => {
+    expect(auditQueryString({ userId: "  ", module: "" }, 10)).toBe("?limit=10");
+  });
+});
+
 describe("fetchAuditLog", () => {
+  it("passes filters through to the request URL", async () => {
+    vi.mocked(fetch).mockResolvedValue(res(200, []));
+    await fetchAuditLog({ userId: "u1", module: "hse" });
+    const url = String(vi.mocked(fetch).mock.calls[0]?.[0]);
+    expect(url).toContain("user_id=u1");
+    expect(url).toContain("module=hse");
+  });
+
   it("unwraps an envelope and drops id-less rows", async () => {
     vi.mocked(fetch).mockResolvedValue(res(200, { entries: [{ id: "1", action: "a" }, { action: "no id" }] }));
     const out = await fetchAuditLog();
