@@ -3,6 +3,7 @@ import "./globals.css";
 import { fontMono, fontSans } from "@/lib/fonts";
 import { site } from "@/lib/site";
 import { Plausible } from "@/components/analytics/Plausible";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             app/(marketing)/layout.tsx and app/app/layout.tsx. */}
         {children}
         <Plausible />
+        <Analytics />
       </body>
     </html>
   );
