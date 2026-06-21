@@ -23,5 +23,10 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: ${{ github.event.deployment_status.target_url }}
-          # -a includes passive rules marked "informational"; still passive-only.
-          cmd_options: "-a"
+          # -a includes "informational" passive rules; -I makes passive WARNs advisory
+          # (don't fail the job — a baseline scan is for visibility, not a hard gate).
+          # Note: on Vercel preview deploys with protection enabled, ZAP may scan the
+          # auth wall rather than the app (shows false "CSP/Permissions-Policy not set").
+          cmd_options: "-a -I"
+          fail_action: false
+          allow_issue_writing: false
