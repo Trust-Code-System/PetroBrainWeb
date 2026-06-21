@@ -13,15 +13,13 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string, init?: RequestInit) => {
-      if (url.includes("/api/pb/notifications") && (init?.method ?? "GET") === "GET") {
+      // Re-pointed to the live backend's admin notifications route (raw, untyped shape).
+      if (url.includes("/api/pb/admin/notifications") && (init?.method ?? "GET") === "GET") {
         return Promise.resolve(
-          jsonResponse({
-            unread: 1,
-            items: [
-              { id: "n1", kind: "deadline", title: "NUPRC Tier-3 due in 30 days", severity: "warn", read: false },
-              { id: "n2", kind: "task", title: "Copilot created EM-1042", read: true },
-            ],
-          }),
+          jsonResponse([
+            { id: "n1", category: "deadline", title: "NUPRC Tier-3 due in 30 days", severity: "warn", status: "unread" },
+            { id: "n2", category: "task", title: "Copilot created EM-1042", status: "acknowledged" },
+          ]),
         );
       }
       return Promise.resolve(jsonResponse({ ok: true }));
@@ -57,9 +55,15 @@ describe("NotificationBell", () => {
     fireEvent.click(await screen.findByRole("button", { name: /1 unread/i }, { timeout: 5000 }));
     fireEvent.click(await screen.findByRole("button", { name: /Mark all read/i }, { timeout: 5000 }));
     await waitFor(() => {
+      // No bulk endpoint — the client acknowledges each unread notification.
       const called = vi
         .mocked(fetch)
-        .mock.calls.some(([url, init]) => String(url).includes("/notifications/read-all") && init?.method === "POST");
+        .mock.calls.some(
+          ([url, init]) =>
+            String(url).includes("/admin/notifications/") &&
+            String(url).includes("/acknowledge") &&
+            init?.method === "POST",
+        );
       expect(called).toBe(true);
     });
   });

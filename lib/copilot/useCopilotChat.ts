@@ -112,6 +112,9 @@ export function useCopilotChat() {
         case "action":
           patch(id, (m) => ({ ...m, actions: [...(m.actions ?? []), event.action] }));
           break;
+        case "turn":
+          patch(id, (m) => ({ ...m, turnId: event.turnId }));
+          break;
         case "done":
           patch(id, (m) => ({ ...m, status: "done" }));
           break;

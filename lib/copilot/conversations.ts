@@ -64,6 +64,11 @@ export function getConversation(id: string): Conversation | undefined {
   return read().find((c) => c.id === id);
 }
 
+/** Full conversations (with messages), most-recent first — for the AI Governance audit view. */
+export function getAllConversations(): Conversation[] {
+  return read().sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 /** Insert or update a conversation by id (most-recent first). No-op for an empty list. */
 export function upsertConversation(id: string, messages: ChatMessage[]): void {
   if (messages.length === 0) return;

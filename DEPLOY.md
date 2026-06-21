@@ -58,7 +58,8 @@ never fake data.**
 > endpoints not yet built — treat the bridged ones (auth, copilot, and the generic proxy) as
 > authoritative.
 
-- **Auth:** handled by **Neon Auth (Better Auth)** — the frontend uses `@neondatabase/auth` (login/signup/sessions at `/api/auth/[...path]` → Neon Auth server). The data backend must **verify the Neon JWT** sent as Bearer on every call: validate against JWKS `${NEON_AUTH_BASE_URL}/.well-known/jwks.json` (EdDSA/Ed25519, 15-min tokens), read the user id (= `neon_auth` user) + email, resolve tenant/role from its own table (auto-provision on first login). *(Frontend ✅; backend verification = follow-up in Idansss/PetroBrain.)*
+- **Auth:** handled by **Neon Auth (Better Auth)** — the frontend uses `@neondatabase/auth` (login/signup/sessions at `/api/auth/[...path]` → Neon Auth server). The data backend must **verify the Neon JWT** sent as Bearer on every call and expose `GET /auth/me` so the Vercel UI can mirror the backend-resolved tenant, role and allowed assets without trusting client claims. *(Implemented in the local `Trust-Code-System/PetroBrain` checkout; deploy to Render before enabling RBAC UI in production.)*
+- **Organization RBAC:** `GET /organizations/current/members`, `POST /organizations/current/invitations`, `PATCH|DELETE /admin/company/members/{id}`. Invitation emails must set backend `PB_APP_PUBLIC_BASE_URL` to the Vercel production origin; set `PB_RESEND_API_KEY` + `PB_INVITE_EMAIL_FROM` for delivery. Without Resend, the admin UI surfaces the one-time invite path for secure manual sharing. `/invitations/{token}` on Vercel accepts the membership and provisions/signs in the corresponding Neon account.
 - **Copilot:** `POST /chat` (body `{ message, module?, asset_context? }`) → JSON `{ answer, citations[], flags[], tool_results[] }`; the chat route adapts it into the UI's SSE `delta|citation|done` frames. *(Bridged ✅)* Future: streaming + per-turn history + the 4 app-action tools.
 - **Emissions:** `GET /emissions/scope-summary`, `GET|POST /emissions/sources`, `DELETE /emissions/sources/{id}` (undo), `GET /emissions/financed`, `POST /emissions/reports`, `GET /emissions/reconciliation/flaring`.
 - **Flaring:** `GET /flaring/assets|methane-intensity|zero-routine-tracker|opportunity`.
@@ -111,11 +112,40 @@ and verified end-to-end against the live API.
 | **Data Tools** | `/data/*` | ⛔ not implemented → honest empty |
 | **Opportunities** | `/opportunities/*` | ⛔ not implemented → honest empty (as designed) |
 | **Settings / Profile** | `/profile`, `/org`, `/settings`, `/team`, `/memory` | ⛔ not implemented → defaults/empty |
-| **Notifications** | `GET /notifications` | ⛔ not implemented → empty bell |
+| **Notifications** | `GET /admin/notifications` (+ acknowledge) | ✅ **wired** — bell re-pointed; admin-scoped → honest empty for non-admins |
+| **Action Tracker** | `GET/POST /tasks`, `PATCH/DELETE /tasks/{id}` | ✅ **wired (dual-mode)** — synced store, local fallback; owner→`assigned_to_user_ids` from the member list, free-text fallback |
+| **AI Governance** | `GET /admin/audit`, `POST /admin/audit/export`, `GET /admin/feedback*` | ✅ **wired** — live audit + Copilot feedback oversight; honest "unavailable" when not admin |
+| **Org (profile)** | `GET/PATCH /organizations/current` | ✅ **wired (dual-mode)** — profile only; members/depts local |
+
+> **June 2026 OpenAPI re-audit (Session 11).** A direct read of the live `/openapi.json` found
+> **94 routes** — materially more than this table previously recorded. Now confirmed live (and so
+> migration targets for the local-first stores): **`/tasks`** (Action Tracker — *wired*),
+> **`/organizations/current`** (Organization — *profile wired*; members are invitation-based and
+> departments aren't modelled → stay local), **`/admin/audit/*` + `/admin/feedback*`** (AI Governance —
+> audit/export and Copilot answer-feedback oversight wired; admin-scoped),
+> **`/admin/notifications`** (wired). ⚠️ **`POST /documents/preview` does NOT unblock inline preview** —
+> its body is `DocumentIngestRequest` (requires the raw `text` you're about to ingest), i.e. a
+> pre-ingestion chunk preview, not a viewer for an already-uploaded file's bytes. No endpoint serves a
+> stored file's content/URL, so inline document preview stays deferred (honest note kept in the drawer).
+> ⚠️ **`/admin/permits` is a FALSE match** — its schema (`PermitUpload`: form/generated/signatures)
+> is a permit-to-**work** document/e-signature system, not our expiry-tracking permits register, so
+> Permits stays local-first. Still genuinely absent (keep local-first): HSE, operations log,
+> compliance obligations, audit evidence. There's also an unused **`/research/*`** deep-research agent.
 
 Backend also implements (no dedicated UI yet): `/well-control/kill-sheet`, `/docs/snapshot`,
+`/research/*` (plan→approve→run→events→export), `/onboarding/*`, `/invitations/*`,
 `/assets/{id}/path|descendants|relationships`, `/admin/*` (tenants, users, audit, permits,
-data-readiness).
+company, memory, data-readiness).
+
+**Local-first → backend migration pattern (Action Tracker is the reference).** `lib/sync/
+syncedCollection.ts` keeps the synchronous, reactive store API every page already uses (so no
+component changed) while syncing to the proxy: optimistic local writes that write through to a
+`SyncAdapter`, a non-destructive hydrate on mount, and an honest fall back to device-local storage
+on any 401/unavailable/offline. `lib/actions/client.ts` maps `ActionItem ⇄ /tasks`. **Caveat:** the
+action `owner` (a free-text person name) stays local-only — the backend wants `assigned_to_user_ids`,
+which needs the accounts/RBAC backend to resolve names → ids; `department` rides on `assigned_to_team`.
+React Query is intentionally *not* used at the store surface because its async `{data}` shape would
+break the synchronous component API; the proxy is still the system of record.
 
 **Cross-cutting:** all Neon users currently resolve to one tenant (`default_signup_tenant_id`)
 — per-user tenant/role mapping is a backend follow-up. Render free tier cold-starts (~50s) can

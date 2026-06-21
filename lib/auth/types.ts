@@ -5,12 +5,30 @@
  * the backend (resolved from the Neon user) — blank here until the backend returns it.
  */
 
-export type UserRole = "owner" | "admin" | "analyst" | "viewer" | (string & {});
+export type UserRole =
+  | "platform_admin"
+  | "admin"
+  | "tenant_owner"
+  | "company_admin"
+  | "compliance_admin"
+  | "hse_manager"
+  | "emissions_lead"
+  | "engineer"
+  | "field"
+  | "field_supervisor"
+  | "operations_user"
+  | "commercial_user"
+  | "procurement_user"
+  | "auditor"
+  | "viewer"
+  | "hse"
+  | (string & {});
 
 export type User = {
   id: string;
   email: string;
   role: UserRole;
   tenantId: string;
+  allowedAssets?: string[];
   name?: string;
 };
