@@ -46,7 +46,14 @@ const LIVE_APP_HREFS = new Set<string>([
   "/app/governance/ai-usage", // AI Governance → /admin/audit
   "/app/governance/organization", // /organizations/current
   "/app/intelligence/market-cost", // market tiles + copilot (cost half is honest-unavailable)
-  "/app/profile", // account essentials
+  "/app/profile", // account essentials → /profile (+ avatar)
+  "/app/settings", // /settings, /org, /team, /memory (Track A Group 1)
+  // Reveal-on-ship: each page below is added back here only once its backend ships and the
+  // frontend client is reconciled (don't advertise an empty surface). Pending backend:
+  //   /app/emissions             → rework the client around the inventory model (/emissions/inventory[/ies])
+  //   /app/data                  → /data/{import,export,template,quality,batch}
+  //   /app/intelligence/reports  → /analytics/* + /reports/*  (+ legacy /app/reports, /app/analytics)
+  //   Group 5 (flaring / climate-risk / intelligence-cost) → honest "unavailable" until a real source is wired
 ]);
 
 /** Whether a given /app nav href should be shown in the current launch stage. */
