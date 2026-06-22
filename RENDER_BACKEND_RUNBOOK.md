@@ -143,10 +143,18 @@ To make it durable:
 
 ## Step 8 — Backup & restore (Neon) — verify BEFORE holding real customer data
 
-All durable data lives in **Neon Postgres** (`PB_DATABASE_URL`), not on Render (Render's container
-filesystem is ephemeral). So "backups" = Neon's history retention / point-in-time restore (PITR).
-`DEPLOY.md §7` flags **tested backup-restore + RTO/RPO** as an out-of-repo launch blocker — this step
-closes it. The AI assistant can't open the Neon console; do these in **console.neon.tech**.
+All durable data lives in **Neon Postgres**, not on Render (Render's container filesystem is
+ephemeral). So "backups" = Neon's history retention / point-in-time restore (PITR). `DEPLOY.md §7`
+flags **tested backup-restore + RTO/RPO** as an out-of-repo launch blocker — this step closes it.
+The AI assistant can't open the Neon console; do these in **console.neon.tech**.
+
+> **Topology — there are TWO Neon projects** (verified 2026-06-22). Drill *both*:
+> 1. **Auth store** — Neon project `PetroBrain Web` (`broad-breeze-15165574`, us-east-1). Holds the
+>    `neon_auth` schema only (accounts/sessions/orgs). This is the Neon Auth side.
+> 2. **Backend store** — the project behind **`PB_DATABASE_URL`** (`silent-recipe-25520880` /
+>    `petrobrain`, eu-central-1, db `neondb`). Holds the app schema in `public` (tenants, users,
+>    assets, documents, audit_events, tasks, permits, mrv_inventories, …) **plus** its own
+>    `neon_auth` copy. This is the one with operational/customer data — the more important drill.
 
 **8a. Confirm continuous backup (PITR) is on and sized.**
 
@@ -169,8 +177,12 @@ closes it. The AI assistant can't open the Neon console; do these in **console.n
 
 **8c. Record the result.** Update the line below each time you drill, so launch sign-off has evidence:
 
-> **Backup/restore last drilled:** *not yet* — RPO ≈ continuous (Neon WAL), RTO = *TBD*, retention = *TBD*.
-> Owner: *TBD*. (Fill in after running 8b; re-drill after any major schema migration.)
+> **Backup/restore last drilled: 2026-06-22** — RPO ≈ continuous (Neon WAL), RTO ≈ a few minutes
+> (PITR branch spins up in seconds). **Both projects verified** via point-in-time `restore-drill`
+> branches: auth store (us-east-1) restored 2 users / 41 sessions; backend store (eu-central-1)
+> restored 6 tenants / 10 users / 215 audit_events / 1 asset / 1 task. **Caveat:** retention is the
+> Free-plan **6h** on both — **upgrade to ≥7 days before holding real customer data** (a 6h window
+> means an issue noticed the next morning is unrecoverable). Re-drill after any major schema migration.
 
 **8d. Also protect the Neon Auth data.** Neon Auth (Better Auth) stores users/sessions in its own
 Neon-managed store. Confirm that project/branch has the same retention policy, or that user identities
