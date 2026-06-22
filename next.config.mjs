@@ -24,6 +24,8 @@ const dynamicOrigins = [
   process.env.NEXT_PUBLIC_CLIMATE_TILE_URL_HEAT,
   process.env.NEXT_PUBLIC_CLIMATE_TILE_URL_COASTAL,
   process.env.NEXT_PUBLIC_CLIMATE_TILE_URL_EROSION,
+  // Sentry ingest endpoint (the browser SDK POSTs events to the DSN's host).
+  process.env.NEXT_PUBLIC_SENTRY_DSN,
 ]
   .map(originOf)
   .filter(Boolean);
