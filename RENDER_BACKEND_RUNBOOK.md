@@ -55,6 +55,7 @@ Add / confirm, then **Save Changes** (this triggers a redeploy):
 | `NEON_AUTH_BASE_URL` | *exact value the Vercel frontend uses* | Vercel → `petro-brain-web` → Settings → Environment Variables → copy `NEON_AUTH_BASE_URL`. **Must match.** |
 | `PB_DATABASE_URL` | *(should already be set)* | Postgres (Neon) connection; persists data across redeploys |
 | `ANTHROPIC_API_KEY` | *(should already be set)* | required for the copilot/AI |
+| `PB_PERSISTENCE_BACKEND` | `postgres` *(optional)* | **default `local_json` writes an ephemeral JSONL → the AI audit log resets per deploy**; set `postgres` (+ `PB_DATABASE_URL`) to make it durable — see Step 7. Do **not** instead flip `PB_ENVIRONMENT` to `production` (see Step 7 warning). |
 
 Defaults that are already fine (don't need to set): `jwt_issuer=petrobrain`,
 `jwt_audience=petrobrain-api`. Settings use the **`PB_` prefix** (e.g. the `neon_auth_enabled` field
@@ -105,6 +106,76 @@ Reload the Vercel app and check:
 
 If these show data, items 1 (RBAC), 2 (task ownership), and 4 (audit filters) from
 [PETROBRAIN_REBUILD_TODO.md](PETROBRAIN_REBUILD_TODO.md) are live-verified.
+
+## Step 7 — (optional) make the AI audit log durable across deploys
+
+The `/admin/audit` log **populates as the copilot is used**, but whether it survives a deploy depends
+on **one env var**: `PB_PERSISTENCE_BACKEND` (verified in the backend source —
+`app/db/audit_events_repository.py::get_audit_events_repository` + `app/config.py`).
+
+- **`PB_PERSISTENCE_BACKEND=local_json`** (the field default) → `/admin/audit` is served from an
+  append-only JSONL file (`PB_AUDIT_EVENTS_STORE_PATH`, default `data/audit_events.jsonl`). On Render's
+  ephemeral container filesystem this is **wiped on every deploy**, so the AI Governance
+  "Account-wide AI activity log" panel looks empty after each redeploy even though auth + filters work.
+- **`PB_PERSISTENCE_BACKEND=postgres`** → `/admin/audit` reads/writes the `audit_events` table over
+  `PB_DATABASE_URL` (durable across deploys). This is what the `render.yaml` "promote to production"
+  path prescribes.
+
+To make it durable:
+
+1. Set **`PB_PERSISTENCE_BACKEND=postgres`** in Render → Environment.
+2. Set **`PB_DATABASE_URL`** to the Neon Postgres DSN (the `render.yaml` blueprint expects this pasted
+   in the dashboard; `sync: false`).
+3. Ensure the `audit_events` table exists — migration `app/db/migrations/002_audit_events.sql`.
+   `main.py` does **not** auto-run migrations; the Dockerfile `CMD` runs the migration step before
+   `uvicorn` (see the `render.yaml` note at the `web` service), so a normal deploy applies it. If
+   `/admin/audit` 500s about a missing table, run `python -m app.db.pg` (→ `run_migrations()`) once via
+   Render → Shell.
+4. **Save Changes** (redeploys), use the copilot a few times, reload AI Governance, redeploy, and
+   confirm the rows are still there.
+
+> ⚠️ **Do NOT instead flip `PB_ENVIRONMENT` to `production` to "turn off demo".** `validate_production_settings`
+> (runs at boot, `app/main.py:45`) will **refuse to start** unless you *also* set a non-default
+> `PB_JWT_SECRET`, `PB_PERSISTENCE_BACKEND=postgres`, `PB_ENABLE_SELF_SIGNUP=false`, **and clear
+> `PB_BOOTSTRAP_PLATFORM_ADMIN_EMAILS`** — which Session 19 deliberately set to bootstrap the admin. So
+> flipping `PB_ENVIRONMENT` would break the current boot; `PB_PERSISTENCE_BACKEND` is the correct,
+> isolated lever for audit durability.
+
+## Step 8 — Backup & restore (Neon) — verify BEFORE holding real customer data
+
+All durable data lives in **Neon Postgres** (`PB_DATABASE_URL`), not on Render (Render's container
+filesystem is ephemeral). So "backups" = Neon's history retention / point-in-time restore (PITR).
+`DEPLOY.md §7` flags **tested backup-restore + RTO/RPO** as an out-of-repo launch blocker — this step
+closes it. The AI assistant can't open the Neon console; do these in **console.neon.tech**.
+
+**8a. Confirm continuous backup (PITR) is on and sized.**
+
+- Neon Console → your project → **Settings → Storage** (a.k.a. *History retention*). Confirm the
+  **retention window** is non-zero. Free/Hobby defaults to ~24h; **bump to ≥7 days** before launch
+  (longer window = older point you can restore to = your effective backup depth).
+- Neon keeps a continuous WAL history, so the **RPO is effectively seconds** (not a nightly snapshot).
+  There is no "enable backups" toggle to miss — but a **0-retention** project can't restore, hence 8a.
+
+**8b. Run a non-destructive restore drill (proves it actually works — this is the part people skip).**
+
+1. Note a known row (e.g. a `users` or `audit_events` id + a timestamp a few minutes ago).
+2. Neon Console → **Branches → New branch → "From a point in time"**, pick a timestamp from before
+   now, name it `restore-drill`. (A branch is a copy-on-write clone — zero risk to `main`/prod.)
+3. Connect to the branch (Neon gives a separate DSN) and confirm the row is present and correct:
+   `psql "<branch-dsn>" -c "select count(*) from audit_events;"`
+4. **Measure RTO** = wall-clock from "start branch" to "queried good data" (Neon PITR branches are
+   typically a few minutes). Record it.
+5. Delete the `restore-drill` branch when done so it doesn't accrue storage.
+
+**8c. Record the result.** Update the line below each time you drill, so launch sign-off has evidence:
+
+> **Backup/restore last drilled:** *not yet* — RPO ≈ continuous (Neon WAL), RTO = *TBD*, retention = *TBD*.
+> Owner: *TBD*. (Fill in after running 8b; re-drill after any major schema migration.)
+
+**8d. Also protect the Neon Auth data.** Neon Auth (Better Auth) stores users/sessions in its own
+Neon-managed store. Confirm that project/branch has the same retention policy, or that user identities
+can be re-provisioned (Step 5 maps `token.sub → users.id`, so the backend `users` table is the
+source of truth that actually matters for access).
 
 ---
 

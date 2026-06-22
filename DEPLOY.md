@@ -255,9 +255,20 @@ Built into this repo — verify the env-dependent bits are configured for prod.
   + malware scanning — **confirm it does** (open item).
 - **PII hygiene:** lead routes forward to `CRM_WEBHOOK_URL` and log only a masked email + non-
   identifying fields — no raw PII in logs.
-- **Known accepted advisories:** the remaining `npm audit` findings are all dev/test-only
-  (vitest/esbuild/vite) or require breaking major bumps of the beta auth packages. The prod
-  build chain is already on patched versions. Revisit in a dedicated, tested upgrade.
+- **Known accepted advisories** (reviewed 2026-06-22; `npm audit` prod gate = **0 high**):
+  + *Dev/test-only* (vitest/vite/esbuild/form-data) — never ship; excluded by `--omit=dev`.
+  + *contentlayer chain (Snyk High + 2 Mediums):* `@opentelemetry/core` (DoS, CVSS 8.2),
+    `js-yaml@3.14.2`, `uuid@9.0.1`, all transitive via `contentlayer2`/`next-contentlayer2`.
+    **Build-time only** — contentlayer parses MDX during `next build` and emits static data;
+    none of it is on the request-serving path at runtime. **No supported fix** (contentlayer2
+    pins them); forcing `js-yaml 3→4` / `uuid 9→11` would break the content build for zero
+    runtime benefit. Ignored in Snyk with this reason. Durable fix = migrate off the
+    (unmaintained) `contentlayer2` to a maintained MDX pipeline — backlog, not a launch blocker.
+  + *`better-auth@1.4.18` CSRF (Snyk Medium, via `@neondatabase/auth` beta):* runtime, but
+    Better Auth ships its own CSRF defenses; clears when Neon's beta bumps its `better-auth`
+    pin. The OAuth-`state` advisory (GHSA-wxw3-q3m9-c3jr) is N/A — email/password only.
+  + `.github/workflows/security.yml` hard-gates future **prod** highs; Snyk (UI import) adds
+    continuous build-time visibility on top.
 
 ### Reliability & observability
 - **Health endpoint:** `GET /api/health` → app liveness + a 3s backend reachability probe.
@@ -265,9 +276,11 @@ Built into this repo — verify the env-dependent bits are configured for prod.
   **external uptime monitor** (UptimeRobot, cron-job.org) at `/api/health` every ~10 min to
   keep the backend awake. The proxy/upload/copilot routes also set `maxDuration = 60` and the
   proxy retries idempotent (GET/HEAD) calls once to ride out a cold start.
-- **Error boundaries:** `app/global-error.tsx` (root) + `app/app/error.tsx` (`/app` segment)
-  degrade gracefully and report via `lib/observability.ts` — set `NEXT_PUBLIC_ERROR_REPORT_URL`
-  to forward client crashes to a collector (else log-only).
+- **Error boundaries + Sentry:** `app/global-error.tsx` (root) + `app/app/error.tsx` (`/app`
+  segment) degrade gracefully and funnel through `lib/observability.ts`. **Sentry is wired**
+  (`instrumentation*.ts` + `sentry.*.config.ts`, DSN-gated): set `SENTRY_DSN` +
+  `NEXT_PUBLIC_SENTRY_DSN` (same value) to capture server/RSC/route + client errors; unset = no-op.
+  `NEXT_PUBLIC_ERROR_REPORT_URL` still works as an extra beacon. Sentry project: `petrobrain-web`.
 
 > **Out of this repo (backend/infra):** DB indexes/pooling, tested backup-restore + RTO/RPO,
 > moving the backend off Render free tier, and a security audit of the Python backend (the tier
