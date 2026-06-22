@@ -31,6 +31,14 @@ jobs:
       - name: Install
         run: npm ci
 
+      # pa11y-ci drives a headless browser via Puppeteer, which isn't bundled on the runner.
+      # Install Chrome and point Puppeteer straight at it (PUPPETEER_EXECUTABLE_PATH) so we
+      # bypass Puppeteer's version-pinned browser lookup, which otherwise fails with
+      # "Could not find Chrome (ver. …)".
+      - name: Set up Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+
       - name: Build
         run: npm run build
 
@@ -41,3 +49,5 @@ jobs:
 
       - name: Run pa11y-ci
         run: npx pa11y-ci
+        env:
+          PUPPETEER_EXECUTABLE_PATH: ${{ steps.chrome.outputs.chrome-path }}
