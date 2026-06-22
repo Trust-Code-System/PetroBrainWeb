@@ -3,7 +3,7 @@ import { reportError } from "@/lib/observability";
 
 /**
  * TEMPORARY Sentry verification route — remove after confirming events land in the
- * `petrobrain-web` Sentry project. Hitting GET /api/_sentry-test fires one error through our
+ * `petrobrain-web` Sentry project. Hitting GET /api/sentry-test fires one error through our
  * reportError() funnel (so the resulting Sentry event carries `boundary=sentry-test`, proving
  * it came through our wiring — not generic auto-capture).
  *
