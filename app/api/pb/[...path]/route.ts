@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getBackendAccessToken } from "@/lib/auth/server";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 /**
  * Authenticated BFF proxy to the PetroBrain backend. The browser calls /api/pb/<path>;
@@ -46,6 +47,11 @@ async function forward(req: NextRequest, path: string[]): Promise<Response> {
   if (!token) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
+
+  // Generous per-IP ceiling. The backend is the real authority (auth + RLS); this is a
+  // defence-in-depth cap so a runaway/compromised client can't hammer the backend through us.
+  const limited = await enforceRateLimit(req, "pb-proxy", 120, 60_000);
+  if (limited) return limited;
 
   const target = `${API_URL}/${path.map(encodeURIComponent).join("/")}${req.nextUrl.search}`;
   const headers: Record<string, string> = {

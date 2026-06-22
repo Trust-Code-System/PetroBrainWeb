@@ -30,11 +30,12 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Report runtime advisories. `|| true` keeps the run green while the known
-      # better-auth (beta) high advisory is tracked — flip it off once resolved to
-      # make high-severity prod-dependency advisories a hard gate.
+      # Hard gate: fail CI on any HIGH+ advisory in the production dependency tree.
+      # (Dev-only advisories — vitest/vite/form-data — are excluded via --omit=dev and don't
+      # ship.) Moderate prod advisories are surfaced by the weekly schedule + Snyk/CodeQL but
+      # don't block a merge.
       - name: npm audit (prod deps, high+)
-        run: npm audit --audit-level=high --omit=dev || true
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Snyk
         if: ${{ secrets.SNYK_TOKEN != '' }}
