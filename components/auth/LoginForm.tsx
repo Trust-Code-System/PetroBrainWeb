@@ -87,6 +87,15 @@ export function LoginForm({ next }: { next?: string }) {
         />
       </Field>
 
+      <div className="-mt-2 text-right">
+        <Link
+          href="/forgot-password"
+          className="text-sm text-secondary underline-offset-2 hover:text-primary hover:underline"
+        >
+          Forgot your password?
+        </Link>
+      </div>
+
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>
         {submitting ? "Signing in…" : "Sign in"}
       </Button>
