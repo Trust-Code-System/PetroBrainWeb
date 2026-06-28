@@ -15,7 +15,7 @@
   "dependencies": {
     "@neondatabase/auth": "^0.4.2-beta",
     "@sentry/nextjs": "^10.59.0",
-    "@tanstack/react-query": "^5.100.14",
+    "@tanstack/react-query": "^5.101.2",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "contentlayer2": "^0.5.8",
