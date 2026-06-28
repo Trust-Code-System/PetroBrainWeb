@@ -37,7 +37,7 @@ jobs:
       # "Could not find Chrome (ver. …)".
       - name: Set up Chrome
         id: chrome
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v2
 
       - name: Build
         run: npm run build
